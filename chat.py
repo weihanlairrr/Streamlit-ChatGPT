@@ -1,7 +1,26 @@
-from openai import OpenAI
 import streamlit as st
 import time
 import base64
+from openai import OpenAI
+from streamlit_option_menu import option_menu
+
+st.markdown("""
+    <style>
+    .stButton > button {
+        padding: 10px 20px;
+        background-color: green;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 18px;
+        cursor: pointer;
+        margin: 5px;
+    }
+    .stButton > button:hover {
+        background-color: #45a049;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
@@ -87,6 +106,21 @@ if 'tabs' not in st.session_state:
     st.session_state[f"messages_1"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
     st.session_state[f"tab_name_1"] = "對話 1"
 
+if 'chatbot_api_key' not in st.session_state:
+    st.session_state['chatbot_api_key'] = ''
+if 'open_ai_model' not in st.session_state:
+    st.session_state['open_ai_model'] = 'gpt-3.5-turbo'
+if 'language' not in st.session_state:
+    st.session_state['language'] = '繁體中文'
+if 'temperature' not in st.session_state:
+    st.session_state['temperature'] = 1.0
+if 'top_p' not in st.session_state:
+    st.session_state['top_p'] = 1.0
+if 'presence_penalty' not in st.session_state:
+    st.session_state['presence_penalty'] = 0.0
+if 'frequency_penalty' not in st.session_state:
+    st.session_state['frequency_penalty'] = 0.0
+
 def format_message(text):
     return text.replace('\n', '<br>')
 
@@ -141,32 +175,44 @@ def message_func(text, is_user=False, is_df=False, model="gpt"):
                 """,
             unsafe_allow_html=True,
         )
-
+        
+current_tab_key = f"messages_{st.session_state['current_tab']}"
 with st.sidebar:
-    current_tab_index = st.session_state['current_tab'] - 1
-    if current_tab_index >= len(st.session_state['tabs']):
-        current_tab_index = len(st.session_state['tabs']) - 1
-        st.session_state['current_tab'] = current_tab_index + 1
-
-    selected_tab = st.radio(" ", st.session_state['tabs'], index=current_tab_index)
-    st.session_state['current_tab'] = st.session_state['tabs'].index(selected_tab) + 1
-    current_tab_key = f"tab_name_{st.session_state['current_tab']}"
-    openai_api_key = st.text_input("請輸入 OpenAI API Key", key="chatbot_api_key", type="password")
-    with st.expander("模型設定"):
-        open_ai_model = st.selectbox("選擇 GPT 模型", ("gpt-3.5-turbo", "gpt-4-turbo", "gpt-4o"),help="3.5-turbo: US$1.5 / 1M tokens｜ 4-turbo價格為其20倍｜ 4o價格為其10倍")
-        language = st.text_input("指定使用的語言",placeholder="預設為繁體中文")
-        temperature = st.select_slider("選擇 Temperature", options=[i/10.0 for i in range(21)], value=1.0, help="較高的值（如0.8）會使輸出更隨機，而較低的值（如0.2）則會使其更加集中和確定性。建議僅更改 Top P或 Temperature 中的一個，而不要同時更改兩個。")
-        top_p = st.select_slider("選擇 Top P", options=[i/10.0 for i in range(11)], value=1.0, help="當該參數設為0.1時，只有包含前10%概率質量的標記將被考慮。建議僅更改 Top P或 Temperature 中的一個，而不要同時更改兩個。")
-        presence_penalty = st.select_slider("選擇 Presence Penalty", options=[i/10.0 for i in range(-20, 21)], value=0.0, help="該參數的取值範圍為-2.0到2.0。正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
-        frequency_penalty = st.select_slider("選擇 Frequence Penalty", options=[i/10.0 for i in range(-20, 21)], value=0.0, help="該參數的取值範圍為-2.0到2.0。正值會根據新標記在當前生成的文本中的已有頻率對其進行懲罰，從而減少模型直接重複相同語句的可能性。")
-    st.write("\n")
-    col1, col2, col3, col4 = st.columns([0.8,3,3,1.2])  
-    with col2:
-        st.button("新增對話", on_click=add_new_chat)
-    with col3:
-        st.button("刪除對話", on_click=delete_current_chat)
+    selected = option_menu("主頁", ["對話", '頭像','設定'], 
+        icons=['chat-left-dots','person-circle' ,'gear'], menu_icon="cast", default_index=0,
+        styles={
+        "container": {"padding": "4!important", "background-color": "#fafafa"},
+        "icon": {"color": "orange", "font-size": "20px"}, 
+        "nav-link": {"font-size": "20px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
+        "nav-link-selected": {"background-color": "green"}})
     
-    st.text_input("修改對話名稱", key=current_tab_key, on_change=update_tab_name)
+    if selected == "對話":
+        col1, col2 = st.columns(2)  
+        with col1:
+            st.button("新增對話", on_click=add_new_chat, use_container_width=True)
+        with col2:
+            st.button("刪除對話", on_click=delete_current_chat, use_container_width=True)
+        st.text_input("修改對話名稱", key=f"tab_name_{st.session_state['current_tab']}", on_change=update_tab_name)
+        
+        st.divider()
+        current_tab_index = st.session_state['current_tab'] - 1
+        if current_tab_index >= len(st.session_state['tabs']):
+            current_tab_index = len(st.session_state['tabs']) - 1
+            st.session_state['current_tab'] = current_tab_index + 1
+
+        selected_tab = st.radio(" ", st.session_state['tabs'], index=current_tab_index)
+        st.session_state['current_tab'] = st.session_state['tabs'].index(selected_tab) + 1
+        current_tab_key = f"messages_{st.session_state['current_tab']}"
+
+    if selected == "設定":
+        st.session_state['chatbot_api_key'] = st.text_input("請輸入 OpenAI API Key", value=st.session_state.get('chatbot_api_key', ''), type="password")
+        with st.expander("模型設定"):
+            st.session_state['open_ai_model'] = st.selectbox("選擇 GPT 模型", ("gpt-3.5-turbo", "gpt-4-turbo", "gpt-4o"), index=("gpt-3.5-turbo", "gpt-4-turbo", "gpt-4o").index(st.session_state.get('open_ai_model', 'gpt-3.5-turbo')))
+            st.session_state['language'] = st.text_input("指定使用的語言", value=st.session_state.get('language'), placeholder="預設為繁體中文")
+            st.session_state['temperature'] = st.select_slider("選擇 Temperature", options=[i/10.0 for i in range(21)], value=st.session_state.get('temperature', 1.0))
+            st.session_state['top_p'] = st.select_slider("選擇 Top P", options=[i/10.0 for i in range(11)], value=st.session_state.get('top_p', 1.0))
+            st.session_state['presence_penalty'] = st.select_slider("選擇 Presence Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('presence_penalty', 0.0))
+            st.session_state['frequency_penalty'] = st.select_slider("選擇 Frequence Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('frequency_penalty', 0.0))
 
 current_tab_key = f"messages_{st.session_state['current_tab']}"
 if current_tab_key not in st.session_state:
@@ -177,11 +223,11 @@ for msg in st.session_state[current_tab_key]:
 
 prompt = st.chat_input()
 if prompt:
-    if not openai_api_key:
+    if not st.session_state['chatbot_api_key']:
         st.info("Please add your OpenAI API key to continue.")
         st.stop()
 
-    client = OpenAI(api_key=openai_api_key)
+    client = OpenAI(api_key=st.session_state['chatbot_api_key'])
     st.session_state[current_tab_key].append({"role": "user", "content": prompt})
     message_func(prompt, is_user=True)
 
@@ -192,13 +238,13 @@ if prompt:
     with thinking_placeholder.container():
         message_func("Thinking...", is_user=False)
     
-    if language:
-        prompt = prompt + f" 請完全使用{language}回答"
+    if st.session_state['language']:
+        prompt = prompt + f" 請完全使用{st.session_state['language']}回答"
     else:
         prompt = prompt + f" 請使用繁體中文回答"
     messages = st.session_state[current_tab_key][:-1] + [{"role": "user", "content": prompt}]
 
-    response_message = get_openai_response(client, open_ai_model, messages, temperature, top_p, presence_penalty, frequency_penalty)
+    response_message = get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'])
     
     # 清除 "Thinking..." 訊息並顯示真正的回應
     st.session_state[current_tab_key].pop()
