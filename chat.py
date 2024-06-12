@@ -26,8 +26,8 @@ def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
 
-assistant_avatar = get_image_as_base64("ChatGPT logo.png")
-user_avatar = get_image_as_base64("Asian Man.png")
+assistant_avatar = get_image_as_base64("ChatGPT Logo.PNG")
+user_avatar = get_image_as_base64("Asian Man.PNG")
 
 def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty):
     try:
