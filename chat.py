@@ -147,7 +147,7 @@ def message_func(text, is_user=False, is_df=False, model="gpt"):
         )
     else:
         message_alignment = "flex-start"
-        message_bg_color =  "linear-gradient(-45deg, #00B2FF 0%, #006AFF 100%)"
+        message_bg_color = "linear-gradient(135deg, #71797E 0%, #2E2F30 100%)"
         avatar_class = "bot-avatar"
         avatar_size = "width: 50px; height: 28px;"
 
