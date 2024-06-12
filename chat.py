@@ -138,7 +138,7 @@ def message_func(text, is_user=False, is_df=False, model="gpt"):
         st.write(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 20px; justify-content: {message_alignment};">
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 20px; padding: 10px; margin-right: 5px; font-size: 14px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 5px; font-size: 14px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
@@ -147,7 +147,7 @@ def message_func(text, is_user=False, is_df=False, model="gpt"):
         )
     else:
         message_alignment = "flex-start"
-        message_bg_color = "linear-gradient(-45deg, #71797E 0%, #2E2F30 100%)"
+        message_bg_color = "#F1F1F1"
         avatar_class = "bot-avatar"
         avatar_size = "width: 50px; height: 28px;"
 
@@ -169,7 +169,7 @@ def message_func(text, is_user=False, is_df=False, model="gpt"):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 20px; justify-content: {message_alignment};">
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 20px; padding: 10px; margin-right: 10px; margin-left: 5px; font-size: 14px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: black; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 5px; font-size: 14px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                 </div>
                 """,
