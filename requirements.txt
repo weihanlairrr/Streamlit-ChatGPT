@@ -1,2 +1,4 @@
 streamlit
 openai
+base64
+streamlit_option_menu
