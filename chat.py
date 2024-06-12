@@ -8,7 +8,7 @@ st.markdown("""
     <style>
     .stButton > button {
         padding: 10px 20px;
-        background-color: green;
+        background-color: #45a049;
         color: white;
         border: none;
         border-radius: 5px;
@@ -134,7 +134,7 @@ def message_func(text, is_user=False, is_df=False, model="gpt"):
         message_alignment = "flex-end"
         message_bg_color = "linear-gradient(135deg, #00B2FF 0%, #006AFF 100%)"
         avatar_class = "user-avatar"
-        avatar_size = "width: 45px; height: 33;"
+        avatar_size = "width: 38px; height: 30;"
         st.write(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 20px; justify-content: {message_alignment};">
@@ -147,7 +147,7 @@ def message_func(text, is_user=False, is_df=False, model="gpt"):
         )
     else:
         message_alignment = "flex-start"
-        message_bg_color =  "linear-gradient(135deg, #909090 0%, #606060 100%)"
+        message_bg_color =  "linear-gradient(-45deg, #00B2FF 0%, #006AFF 100%)"
         avatar_class = "bot-avatar"
         avatar_size = "width: 50px; height: 28px;"
 
