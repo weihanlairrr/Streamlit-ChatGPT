@@ -138,7 +138,7 @@ def message_func(text, is_user=False, is_df=False, model="gpt"):
         st.write(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 5px; font-size: 14px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 5px; font-size: 30x; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
@@ -169,7 +169,7 @@ def message_func(text, is_user=False, is_df=False, model="gpt"):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: black; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 5px; font-size: 14px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: black; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 5px; font-size: 30x; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                 </div>
                 """,
@@ -181,7 +181,7 @@ with st.sidebar:
     selected = option_menu("主頁", ["對話", '頭像','設定'], 
         icons=['chat-left-dots','person-circle' ,'gear'], menu_icon="cast", default_index=0,
         styles={
-        "container": {"padding": "4!important", "background-color": "#fafafa"},
+        "container": {"padding": "2!important", "background-color": "#fafafa"},
         "icon": {"color": "orange", "font-size": "20px"}, 
         "nav-link": {"font-size": "20px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
         "nav-link-selected": {"background-color": "#006AFF"}})
