@@ -8,7 +8,7 @@ st.markdown("""
     <style>
     .stButton > button {
         padding: 10px 20px;
-        background-color: #45a049;
+        background-color: #3399FF;
         color: white;
         border: none;
         border-radius: 5px;
@@ -17,7 +17,7 @@ st.markdown("""
         margin: 5px;
     }
     .stButton > button:hover {
-        background-color: #45a049;
+        background-color: #3399FF;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -27,7 +27,7 @@ def get_image_as_base64(image_path):
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 assistant_avatar = get_image_as_base64("ChatGPT logo.png")
-user_avatar = get_image_as_base64("AI 3D Dog Avatar.png")
+user_avatar = get_image_as_base64("Asian Man.png")
 
 def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty):
     try:
@@ -184,7 +184,7 @@ with st.sidebar:
         "container": {"padding": "4!important", "background-color": "#fafafa"},
         "icon": {"color": "orange", "font-size": "20px"}, 
         "nav-link": {"font-size": "20px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
-        "nav-link-selected": {"background-color": "green"}})
+        "nav-link-selected": {"background-color": "#006AFF"}})
     
     if selected == "對話":
         col1, col2 = st.columns(2)  
