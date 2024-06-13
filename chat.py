@@ -250,10 +250,10 @@ with st.sidebar:
         with st.expander("模型設定"):
             st.session_state['open_ai_model'] = st.selectbox("選擇 GPT 模型", ("gpt-3.5-turbo", "gpt-4-turbo", "gpt-4o"), index=("gpt-3.5-turbo", "gpt-4-turbo", "gpt-4o").index(st.session_state.get('open_ai_model', 'gpt-3.5-turbo')))
             st.session_state['language'] = st.text_input("指定使用的語言", value=st.session_state.get('language'), placeholder="預設為繁體中文")
-            st.session_state['temperature'] = st.select_slider("選擇 Temperature", options=[i/10.0 for i in range(21)], value=st.session_state.get('temperature', 1.0))
-            st.session_state['top_p'] = st.select_slider("選擇 Top P", options=[i/10.0 for i in range(11)], value=st.session_state.get('top_p', 1.0))
-            st.session_state['presence_penalty'] = st.select_slider("選擇 Presence Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('presence_penalty', 0.0))
-            st.session_state['frequency_penalty'] = st.select_slider("選擇 Frequence Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('frequency_penalty', 0.0))
+            st.session_state['temperature'] = st.select_slider("選擇 Temperature", options=[i/10.0 for i in range(21)], value=st.session_state.get('temperature', 1.0),help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。一般建議只更改此參數或 Top P 中的一個，而不要同時更改。")
+            st.session_state['top_p'] = st.select_slider("選擇 Top P", options=[i/10.0 for i in range(11)], value=st.session_state.get('top_p', 1.0),help="一種替代採用溫度進行採樣的方法，稱為“基於核心概率”的採樣。在該方法中，模型會考慮概率最高的top_p個標記的預測結果。因此，當該參數為0.1時，只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。")
+            st.session_state['presence_penalty'] = st.select_slider("選擇 Presence Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('presence_penalty', 0.0),help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
+            st.session_state['frequency_penalty'] = st.select_slider("選擇 Frequence Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('frequency_penalty', 0.0),help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
 
 current_tab_key = f"messages_{st.session_state['current_tab']}"
 if current_tab_key not in st.session_state:
