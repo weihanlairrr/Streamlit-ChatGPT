@@ -14,7 +14,8 @@ st.markdown("""
         border-radius: 5px;
         font-size: 18px;
         cursor: pointer;
-        margin: 5px;
+        margin: 3px 0; /* 僅設定上下邊距，消除左右邊距 */
+        width: 100%; /* 讓按鈕自動佔滿整欄 */
     }
     .stButton > button:hover {
         background-color: #3399FF;
@@ -26,8 +27,34 @@ def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
 
-assistant_avatar = get_image_as_base64("ChatGPT Logo.PNG")
-user_avatar = get_image_as_base64("Asian Man.PNG")
+assistant_avatar = get_image_as_base64("ChatGPT Logo.png")
+user_avatar_default = get_image_as_base64("Asian Man.png")
+
+# 加載所有頭像圖片
+avatars = {
+    "Asian Man": get_image_as_base64("Asian Man.png"),
+    "Robot": get_image_as_base64("Robot.png"),
+    "Cat": get_image_as_base64("Cat.png"),
+    "Dog": get_image_as_base64("Dog.png"),
+    "Asian Bearded Man": get_image_as_base64("Asian Bearded Man.png"),
+    "Asian Boy": get_image_as_base64("Asian Boy.png"),
+    "Asian Woman": get_image_as_base64("Asian Woman.png"),
+    "Asian Rainbow Girl": get_image_as_base64("Asian Rainbow Girl.png"),
+    "Asian Girl": get_image_as_base64("Asian Girl.png"),
+}
+
+# 預設使用者頭像
+if 'user_avatar' not in st.session_state:
+    st.session_state['user_avatar'] = user_avatar_default
+
+# 定義一個函數來顯示頭像選項
+def display_avatars():
+    cols = st.columns(3)
+    for i, (name, image) in enumerate(avatars.items()):
+        with cols[i % 3]:
+            st.image(f"data:image/png;base64,{image}", use_column_width=True)
+            if st.button("選擇", key=name):
+                st.session_state['user_avatar'] = image
 
 def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty):
     try:
@@ -126,7 +153,7 @@ def format_message(text):
 
 def message_func(text, is_user=False, is_df=False, model="gpt"):
     model_url = f"data:image/png;base64,{assistant_avatar}"
-    user_url = f"data:image/png;base64,{user_avatar}"
+    user_url = f"data:image/png;base64,{st.session_state['user_avatar']}"
 
     avatar_url = model_url
     if is_user:
@@ -138,7 +165,7 @@ def message_func(text, is_user=False, is_df=False, model="gpt"):
         st.write(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 5px; font-size: 30x; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 5px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
@@ -169,7 +196,7 @@ def message_func(text, is_user=False, is_df=False, model="gpt"):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: black; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 5px; font-size: 30x; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: black; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 5px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                 </div>
                 """,
@@ -181,7 +208,7 @@ with st.sidebar:
     selected = option_menu("主頁", ["對話", '頭像','設定'], 
         icons=['chat-left-dots','person-circle' ,'gear'], menu_icon="cast", default_index=0,
         styles={
-        "container": {"padding": "2!important", "background-color": "#fafafa"},
+        "container": {"padding": "1!important", "background-color": "#fafafa"},
         "icon": {"color": "orange", "font-size": "20px"}, 
         "nav-link": {"font-size": "20px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
         "nav-link-selected": {"background-color": "#006AFF"}})
@@ -204,7 +231,21 @@ with st.sidebar:
         st.session_state['current_tab'] = st.session_state['tabs'].index(selected_tab) + 1
         current_tab_key = f"messages_{st.session_state['current_tab']}"
 
-    if selected == "設定":
+    elif selected == "頭像":
+        st.write("選擇您的頭像")
+        display_avatars()
+        st.write("\n")
+        st.markdown(f"""
+    <div style='text-align: center;'>
+        <img src="data:image/png;base64,{st.session_state['user_avatar']}" style='width: 200px;'/>
+        <p>\n</p>
+    </div>
+""", unsafe_allow_html=True)
+        
+        st.markdown("<p style='text-align: center;'>目前的頭像</p>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+    elif selected == "設定":
         st.session_state['chatbot_api_key'] = st.text_input("請輸入 OpenAI API Key", value=st.session_state.get('chatbot_api_key', ''), type="password")
         with st.expander("模型設定"):
             st.session_state['open_ai_model'] = st.selectbox("選擇 GPT 模型", ("gpt-3.5-turbo", "gpt-4-turbo", "gpt-4o"), index=("gpt-3.5-turbo", "gpt-4-turbo", "gpt-4o").index(st.session_state.get('open_ai_model', 'gpt-3.5-turbo')))
