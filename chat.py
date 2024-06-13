@@ -7,9 +7,9 @@ from streamlit_option_menu import option_menu
 st.markdown("""
     <style>
     .stButton > button {
-        padding: 10px 20px;
-        background-color: #3399FF;
-        color: white;
+        padding: 5x 20px;
+        background-color: #e0e0e0;
+        color: black;
         border: none;
         border-radius: 5px;
         font-size: 18px;
