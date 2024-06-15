@@ -4,18 +4,6 @@ from openai import OpenAI
 from streamlit_option_menu import option_menu
 import ollama  # 新增的匯入
 
-def test_connection():
-    url = "https://api.ollama.com/v1/test"  # 假設這是Ollama API的測試端點
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            print("Connection successful!")
-        else:
-            print(f"Failed to connect, status code: {response.status_code}")
-    except Exception as e:
-        print(f"Error: {e}")
-
-test_connection()
 # Custom CSS for slider color和button styles
 st.markdown("""
     <style>
@@ -213,7 +201,7 @@ def message_func(text, is_user=False, is_df=False):
         )
 
 with st.sidebar:
-    model_toggle = st.radio("", ["ChatGPT", "Llama3"], key="model_type", horizontal=True)
+    model_toggle = st.radio(" ", ["ChatGPT", "Llama3"], key="model_type", horizontal=True)
     
     selected = option_menu("主頁", ["對話", '頭像', '模型設定'], 
         icons=['chat-left-dots', 'person-circle', 'gear'], menu_icon="cast", default_index=0,
