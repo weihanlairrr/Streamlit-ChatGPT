@@ -4,6 +4,18 @@ from openai import OpenAI
 from streamlit_option_menu import option_menu
 import ollama  # 新增的匯入
 
+def test_connection():
+    url = "https://api.ollama.com/v1/test"  # 假設這是Ollama API的測試端點
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            print("Connection successful!")
+        else:
+            print(f"Failed to connect, status code: {response.status_code}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+test_connection()
 # Custom CSS for slider color和button styles
 st.markdown("""
     <style>
