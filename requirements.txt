@@ -2,4 +2,3 @@ streamlit
 openai
 streamlit-option-menu
 ollama
-base64
