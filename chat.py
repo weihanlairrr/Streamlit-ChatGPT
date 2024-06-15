@@ -171,7 +171,7 @@ def message_func(text, is_user=False, is_df=False):
         message_alignment = "flex-start"
         message_bg_color = "#F1F1F1"
         avatar_class = "bot-avatar"
-        avatar_size = "width: 50px; height: 28px;"
+        avatar_size = "width: 45px; height: 28px;"
         if assistant_avatar == assistant_avatar_llama:
             avatar_class += " llama"
 
@@ -298,9 +298,9 @@ if st.session_state['chatbot_api_key'] or st.session_state['model_type'] == "Lla
                     message_func("Thinking...", is_user=False)
                 
                 if st.session_state['language']:
-                    prompt = prompt + f" 請完全使用{st.session_state['language']}回答"
+                    prompt = prompt + f" 除非我要求翻譯，否則請完全使用{st.session_state['language']}回答"
                 else:
-                    prompt = prompt + f" 請使用繁體中文回答"
+                    prompt = prompt + f" 除非我要求翻譯，否則請使用繁體中文回答"
                 messages = st.session_state[current_tab_key][:-1] + [{"role": "user", "content": prompt}]
         
                 response_message = get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'])
@@ -321,9 +321,9 @@ if st.session_state['chatbot_api_key'] or st.session_state['model_type'] == "Lla
                     message_func("Thinking...", is_user=False)
                 
                 if st.session_state['language']:
-                    prompt = prompt + f" 請完全使用{st.session_state['language']}回答"
+                    prompt = prompt + f" 除非我要求翻譯，否則請完全使用{st.session_state['language']}回答。你無需說「我將使用{st.session_state['language']}回答」之類的話。"
                 else:
-                    prompt = prompt + f" 請使用繁體中文回答"
+                    prompt = prompt + f" 除非我要求翻譯，否則請使用繁體中文回答。你無需說「我將使用繁體中文回答」之類的話。"
         
                 response_message = generate_ollama_response(prompt)
                 
