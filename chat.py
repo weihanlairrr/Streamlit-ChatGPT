@@ -64,7 +64,7 @@ if 'llama_temperature' not in st.session_state:
 if 'llama_top_p' not in st.session_state:
     st.session_state['llama_top_p'] = 1.0
 if 'llama_presence_penalty' not in st.session_state:
-    st.session_state['llama_presence_penalty'] = 0.0
+    st.session_state['llama_presence_penalty'] = 1.0
 if 'llama_length_penalty' not in st.session_state:
     st.session_state['llama_length_penalty'] = 1.0
 if 'llama_max_tokens' not in st.session_state:
@@ -76,9 +76,9 @@ if 'temperature' not in st.session_state:
 if 'top_p' not in st.session_state:
     st.session_state['top_p'] = 1.0
 if 'presence_penalty' not in st.session_state:
-    st.session_state['presence_penalty'] = 0.0
+    st.session_state['presence_penalty'] = 1.0
 if 'frequency_penalty' not in st.session_state:
-    st.session_state['frequency_penalty'] = 0.0
+    st.session_state['frequency_penalty'] = 1.0
 if 'max_tokens' not in st.session_state:
     st.session_state['max_tokens'] = 1000
 if 'reset_confirmation' not in st.session_state:
