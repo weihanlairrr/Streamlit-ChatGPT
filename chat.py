@@ -62,7 +62,7 @@ if 'open_ai_model' not in st.session_state:
 if 'llama_temperature' not in st.session_state:
     st.session_state['llama_temperature'] = 0.5
 if 'llama_top_p' not in st.session_state:
-    st.session_state['llama_top_p'] = 1.0
+    st.session_state['llama_top_p'] = 0.5
 if 'llama_presence_penalty' not in st.session_state:
     st.session_state['llama_presence_penalty'] = 1.0
 if 'llama_length_penalty' not in st.session_state:
@@ -74,7 +74,7 @@ if 'language' not in st.session_state:
 if 'temperature' not in st.session_state:
     st.session_state['temperature'] = 0.5
 if 'top_p' not in st.session_state:
-    st.session_state['top_p'] = 1.0
+    st.session_state['top_p'] = 0.5
 if 'presence_penalty' not in st.session_state:
     st.session_state['presence_penalty'] = 1.0
 if 'frequency_penalty' not in st.session_state:
