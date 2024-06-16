@@ -263,6 +263,7 @@ with st.sidebar:
                 if not st.session_state['chat_started']:
                     st.session_state[f"messages_ChatGPT_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？" if api_key_input else "請輸入您的 OpenAI API Key"
                 st.experimental_rerun()
+            st.session_state['open_ai_model'] = st.selectbox("選擇 ChatGPT 模型", ["gpt-3.5-turbo", "gpt-4o"], index=["gpt-3.5-turbo", "gpt-4o"].index(st.session_state.get('open_ai_model', 'gpt-3.5-turbo')))
     
     if selected == "對話":
         st.divider()
