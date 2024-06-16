@@ -37,6 +37,8 @@ assistant_avatar_gpt = get_image_as_base64("Images/ChatGPT Logo.png")
 assistant_avatar_llama = get_image_as_base64("Images/Meta Logo.png")
 assistant_avatar = assistant_avatar_gpt
 user_avatar_default = get_image_as_base64("Images/Asian Man.png")
+logo_base64 = get_image_as_base64("Images/snow ai bot.png")  # 載入 logo
+
 
 avatars = {
     "Asian Man": get_image_as_base64("Images/Asian Man.png"),
@@ -236,18 +238,25 @@ def message_func(text, is_user=False, is_df=False):
         )
 
 with st.sidebar:
-    model_toggle = st.radio("", ["ChatGPT", "Llama3"], key="model_type", horizontal=True)
+    st.markdown(f"""
+        <div class="logo-container">
+            <img src="data:image/png;base64,{logo_base64}" style="width: 100%; height: auto;" />
+        </div>
+    """, unsafe_allow_html=True)
     
-    selected = option_menu("主頁", ["對話", '頭像', '模型設定'], 
+    selected = option_menu("",
+        ["對話", '頭像', '模型設定'], 
         icons=['chat-left-dots', 'person-circle', 'gear'], menu_icon="cast", default_index=0,
         styles={
-        "container": {"padding": "0.5!important", "background-color": "#fafafa"},
-        "icon": {"color": "orange", "font-size": "22px"}, 
-        "nav-link": {"font-size": "19px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
-        "nav-link-selected": {"background-color": "#006AFF"}})
+            "container": {"padding": "0.5!important", "background-color": "#fafafa"},
+            "icon": {"color": "orange", "font-size": "22px"}, 
+            "nav-link": {"font-size": "19px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
+            "nav-link-selected": {"background-color": "#006AFF"},
+        }
+    )
     
     # 根據模型選擇設置 avatar
-    if model_toggle == "Llama3":
+    if st.session_state['model_type'] == "Llama3":
         assistant_avatar = assistant_avatar_llama
         if selected == "對話":
             replicate_api_key_input = st.text_input("請輸入 Replicate API Key", value=st.session_state.get('replicate_api_key', ''), type="password")
@@ -291,7 +300,7 @@ with st.sidebar:
         
     elif selected == "模型設定":
         st.session_state['language'] = st.text_input("指定使用的語言", value=st.session_state.get('language'), placeholder="預設為繁體中文")
-        if model_toggle == "ChatGPT":
+        if st.session_state['model_type'] == "ChatGPT":
             st.session_state['max_tokens'] = st.number_input("Max Tokens", min_value=0, value=st.session_state.get('max_tokens', 1000), help="要生成的最大標記數量。")
             st.session_state['temperature'] = st.select_slider("選擇 Temperature", options=[i/10.0 for i in range(11)], value=st.session_state.get('temperature', 0.5), help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。一般建議只更改此參數或 Top P 中的一個，而不要同時更改。")
             st.session_state['top_p'] = st.select_slider("選擇 Top P", options=[i/10.0 for i in range(11)], value=st.session_state.get('top_p', 1.0), help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。")
@@ -305,6 +314,8 @@ with st.sidebar:
             st.session_state['llama_presence_penalty'] = st.select_slider("選擇 Presence Penalty", options=[i/10.0 for i in range(-2, 21)], value=st.session_state.get('llama_presence_penalty', 0.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
             st.session_state['llama_length_penalty'] = st.select_slider("選擇 Length Penalty", options=[i/10.0 for i in range(0, 51)], value=st.session_state.get('llama_length_penalty', 1.0), help="一個控制輸出長度的參數。如果 < 1，模型會傾向生成較短的輸出；如果 > 1，模型會傾向生成較長的輸出。")
             
+    model_toggle = st.radio("", ["ChatGPT", "Llama3"], key="model_type", horizontal=True)
+
 
 # 根據模型選擇設置當前對話
 current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
