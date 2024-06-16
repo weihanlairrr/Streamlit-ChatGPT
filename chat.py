@@ -129,7 +129,7 @@ def display_avatars():
                 else:
                     st.session_state['user_avatar_llama3'] = image
                 st.session_state['user_avatar'] = image
-                st.rerun()
+                st.experimental_rerun()
 
 def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens):
     try:
