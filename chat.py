@@ -107,8 +107,10 @@ def display_avatars():
 
 def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens):
     try:
+        # 只保留最近的 10 條消息
+        recent_messages = messages[-15:]
         # 整合對話歷史
-        context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in messages])
+        context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_messages])
         response = client.chat.completions.create(
             model=model,
             messages=[{"role": "system", "content": context}],
@@ -129,14 +131,16 @@ def get_openai_response(client, model, messages, temperature, top_p, presence_pe
 
 def generate_ollama_response(prompt, history):
     try:
-        context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history])
+        # 只保留最近的 10 條消息
+        recent_history = history[-15:]
+        context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in recent_history])
         full_prompt = f"{context}\nuser: {prompt}"
         response = replicate.run(
             "meta/meta-llama-3-8b-instruct",
             input={
-                "prompt": full_prompt, 
-                "temperature": st.session_state['llama_temperature'], 
-                "top_p": st.session_state['llama_top_p'], 
+                "prompt": full_prompt,
+                "temperature": st.session_state['llama_temperature'],
+                "top_p": st.session_state['llama_top_p'],
                 "presence_penalty": st.session_state['llama_presence_penalty'],
                 "length_penalty": st.session_state['llama_length_penalty'],
                 "max_tokens": st.session_state['llama_max_tokens'] if st.session_state['llama_max_tokens'] > 0 else None
@@ -146,10 +150,9 @@ def generate_ollama_response(prompt, history):
         if isinstance(response, list):
             response_str = ''.join(response)
         else:
-            response_str = str(response)      
+            response_str = str(response)
         # 移除開頭多餘的換行
         response_str = response_str.lstrip()
-        
         return response_str
     except Exception as e:
         return f"Error: {str(e)}"
