@@ -3,8 +3,9 @@ import base64
 from streamlit_option_menu import option_menu
 import replicate
 import os
-from openai import OpenAI
-
+import requests
+from openai import AsyncOpenAI
+import asyncio
 
 # Custom CSS for slider color和button styles
 st.markdown("""
@@ -21,7 +22,7 @@ st.markdown("""
         width: 100%;
     }
     .stButton > button:hover {
-        background-color: #3399FF;
+        background-color: #0066CC;
     }
     .stRadio {
         display: flex;
@@ -42,6 +43,7 @@ def get_image_as_base64(image_path):
 
 assistant_avatar_gpt = get_image_as_base64("Images/ChatGPT Logo.png")
 assistant_avatar_llama = get_image_as_base64("Images/Meta Logo.png")
+assistant_avatar_perplexity = get_image_as_base64("Images/Perplexity Logo.png")
 user_avatar_default = get_image_as_base64("Images/Asian Bearded Man.png")
 logo_base64 = get_image_as_base64("Images/snow ai bot.png")
 
@@ -64,10 +66,14 @@ if 'chatbot_api_key' not in st.session_state:
     st.session_state['chatbot_api_key'] = ''
 if 'replicate_api_key' not in st.session_state:
     st.session_state['replicate_api_key'] = ''
+if 'perplexity_api_key' not in st.session_state:
+    st.session_state['perplexity_api_key'] = ''
 if 'open_ai_model' not in st.session_state:
     st.session_state['open_ai_model'] = 'gpt-3.5-turbo'
 if 'llama_model' not in st.session_state:
     st.session_state['llama_model'] = 'meta/meta-llama-3-8b-instruct'
+if 'perplexity_model' not in st.session_state:
+    st.session_state['perplexity_model'] = 'llama-3-sonar-large-32k-online'
 if 'llama_temperature' not in st.session_state:
     st.session_state['llama_temperature'] = 0.5
 if 'llama_top_p' not in st.session_state:
@@ -82,6 +88,8 @@ if 'llama_system_prompt' not in st.session_state:
     st.session_state['llama_system_prompt'] = ''
 if 'gpt_system_prompt' not in st.session_state:
     st.session_state['gpt_system_prompt'] = ''
+if 'perplexity_system_prompt' not in st.session_state:
+    st.session_state['perplexity_system_prompt'] = ''
 if 'language' not in st.session_state:
     st.session_state['language'] = ''
 if 'temperature' not in st.session_state:
@@ -103,6 +111,7 @@ if 'tabs' not in st.session_state:
     st.session_state['current_tab'] = 1
     st.session_state[f"messages_ChatGPT_1"] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}]
     st.session_state[f"messages_Llama3_1"] = [{"role": "assistant", "content": "請輸入您的 Replicate API Key" if not st.session_state['replicate_api_key'] else "請問需要什麼協助？"}]
+    st.session_state[f"messages_Perplexity_1"] = [{"role": "assistant", "content": "請輸入您的 Perplexity API Key" if not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
     st.session_state[f"tab_name_1"] = "對話 1"
 if 'chat_started' not in st.session_state:
     st.session_state['chat_started'] = False
@@ -116,12 +125,17 @@ if 'user_avatar_chatgpt' not in st.session_state:
     st.session_state['user_avatar_chatgpt'] = user_avatar_default
 if 'user_avatar_llama3' not in st.session_state:
     st.session_state['user_avatar_llama3'] = user_avatar_default
+if 'user_avatar_perplexity' not in st.session_state:
+    st.session_state['user_avatar_perplexity'] = user_avatar_default
+
 
 # 根據模型選擇設置 user_avatar
 if st.session_state['model_type'] == "ChatGPT":
     st.session_state['user_avatar'] = st.session_state['user_avatar_chatgpt']
-else:
+elif st.session_state['model_type'] == "Llama3":
     st.session_state['user_avatar'] = st.session_state['user_avatar_llama3']
+else:
+    st.session_state['user_avatar'] = st.session_state['user_avatar_perplexity']
 
 def display_avatars():
     cols = st.columns(6)
@@ -131,35 +145,42 @@ def display_avatars():
             if st.button("選擇", key=name):
                 if st.session_state['model_type'] == "ChatGPT":
                     st.session_state['user_avatar_chatgpt'] = image
-                else:
+                elif st.session_state['model_type'] == "Llama3":
                     st.session_state['user_avatar_llama3'] = image
+                else:
+                    st.session_state['user_avatar_perplexity'] = image
                 st.session_state['user_avatar'] = image
                 st.experimental_rerun()
 
-def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt):
+async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt):
     try:
         if system_prompt:
             messages.insert(0, {"role": "system", "content": system_prompt})
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=temperature,
             top_p=top_p,
             presence_penalty=presence_penalty,
             frequency_penalty=frequency_penalty,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            stream=True
         )
-        return response.choices[0].message.content
+        streamed_text = ""
+        async for chunk in response:
+            chunk_content = chunk.choices[0].delta.content
+            if chunk_content is not None:
+                streamed_text += chunk_content
+                yield streamed_text
     except Exception as e:
         error_message = str(e)
         if "Incorrect API key provided" in error_message:
-            return "請輸入正確的 OpenAI API Key"
+            yield "請輸入正確的 OpenAI API Key"
         elif "insufficient_quota" in error_message:
-            return "您的 OpenAI API餘額不足，請至您的帳戶加值"
+            yield "您的 OpenAI API餘額不足，請至您的帳戶加值"
         elif isinstance(e, UnicodeEncodeError):
-            return "請輸入正確的 OpenAI API Key"
-        return f"Error: {error_message}"
-
+            yield "請輸入正確的 OpenAI API Key"
+        yield f"Error: {error_message}"
 
 def generate_ollama_response(prompt, history, model, system_prompt):
     try:
@@ -194,6 +215,58 @@ def generate_ollama_response(prompt, history, model, system_prompt):
     except UnicodeEncodeError:
         return "請輸入正確的 Replicate API Key"
 
+def generate_perplexity_response(prompt, model, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, history):
+    try:
+        import requests
+
+        url = "https://api.perplexity.ai/chat/completions"
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "Authorization": f"Bearer {st.session_state['perplexity_api_key']}"
+        }
+
+        # 根據參數設置，只使用一個懲罰參數
+        if presence_penalty is not None and frequency_penalty is not None:
+            data = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": st.session_state['perplexity_system_prompt']},
+                    {"role": "user", "content": prompt}
+                ],
+                "top_p": top_p,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "presence_penalty": presence_penalty
+            }
+        else:
+            data = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": " "},
+                    {"role": "user", "content": prompt}
+                ],
+                "top_p": top_p,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            if presence_penalty is not None:
+                data["presence_penalty"] = presence_penalty
+            if frequency_penalty is not None:
+                data["frequency_penalty"] = frequency_penalty
+
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        return response.json()["choices"][0]["message"]["content"]
+    except requests.exceptions.HTTPError as e:
+        error_message = str(e)
+        if "401" in error_message:
+            return "請輸入正確的 Perplexity API Key"
+        return f"Error: {error_message}"
+    except UnicodeEncodeError:
+        return "請輸入正確的 Perplexity API Key"
+
+
 def confirm_reset_chat():
     confirm, cancel = st.columns(2)
     with confirm:
@@ -209,8 +282,10 @@ def reset_chat():
     key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
     if st.session_state['model_type'] == 'ChatGPT':
         st.session_state[key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}]
-    else:
+    elif st.session_state['model_type'] == 'Llama3':
         st.session_state[key] = [{"role": "assistant", "content": "請輸入您的 Replicate API Key" if not st.session_state['replicate_api_key'] else "請問需要什麼協助？"}]
+    else:
+        st.session_state[key] = [{"role": "assistant", "content": "請輸入您的 Perplexity API Key" if not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
     st.session_state['reset_confirmation'] = False
     st.session_state['chat_started'] = False
     st.session_state['api_key_removed'] = False
@@ -224,6 +299,8 @@ def update_gpt_system_prompt():
 def update_llama_system_prompt():
     st.session_state['llama_system_prompt'] = st.session_state['llama_system_prompt_input']
 
+def update_perplexity_system_prompt():
+    st.session_state['perplexity_system_prompt'] = st.session_state['perplexity_system_prompt_input']
 
 def message_func(text, is_user=False, is_df=False):
     model_url = f"data:image/png;base64,{assistant_avatar}"
@@ -233,7 +310,7 @@ def message_func(text, is_user=False, is_df=False):
     if is_user:
         avatar_url = user_url
         message_alignment = "flex-end"
-        message_bg_color = "linear-gradient(135deg, #00B2FF 0%, #006AFF 100%)"
+        message_bg_color = "linear-gradient(135deg, #3399FF 0%, #0066CC 100%)"
         avatar_class = "user-avatar"
         avatar_size = "width: 30px; height: 30;"
         st.markdown(
@@ -293,11 +370,11 @@ with st.sidebar:
             "container": {"padding": "0.5!important", "background-color": "#fafafa"},
             "icon": {"color": "orange", "font-size": "22px"}, 
             "nav-link": {"font-size": "19px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
-            "nav-link-selected": {"background-color": "#3399FF"},
+            "nav-link-selected": {"background-color": "#0066CC"},
         }
     )
     
-    model_toggle = st.radio("", ["ChatGPT", "Llama3"], key="model_type", horizontal=True)
+    model_toggle = st.radio("", ["ChatGPT", "Llama3", "Perplexity"], key="model_type", horizontal=True)
     st.write("\n")
     # 根據模型選擇設置 avatar
     if model_toggle == "Llama3":
@@ -310,6 +387,15 @@ with st.sidebar:
         
         if not st.session_state['chat_started']:
             st.session_state[f"messages_Llama3_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？" if replicate_api_key_input else "請輸入您的 Replicate API Key"
+    elif model_toggle == "Perplexity":
+        assistant_avatar = assistant_avatar_perplexity
+        perplexity_api_key_input = st.text_input("請輸入 Perplexity API Key", value=st.session_state.get('perplexity_api_key', ''), type="password")
+        if perplexity_api_key_input != st.session_state['perplexity_api_key']:
+            st.session_state['perplexity_api_key'] = perplexity_api_key_input
+            st.experimental_rerun()
+        
+        if not st.session_state['chat_started']:
+            st.session_state[f"messages_Perplexity_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？" if perplexity_api_key_input else "請輸入您的 Perplexity API Key"
     else:
         assistant_avatar = assistant_avatar_gpt
         api_key_input = st.text_input("請輸入 OpenAI API Key", value=st.session_state.get('chatbot_api_key', ''), type="password")
@@ -324,10 +410,15 @@ with st.sidebar:
     if st.session_state.get('reset_confirmation', False):
         confirm_reset_chat()
 
+
+    current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
+    if current_tab_key not in st.session_state:
+        st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Replicate API Key" if st.session_state['model_type'] == "Llama3" and not st.session_state['replicate_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
+
 if selected == "對話":
     current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
     if current_tab_key not in st.session_state:
-        st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Replicate API Key" if st.session_state['model_type'] == "Llama3" and not st.session_state['replicate_api_key'] else "請問需要什麼協助？"}]
+        st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Replicate API Key" if st.session_state['model_type'] == "Llama3" and not st.session_state['replicate_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
 
     # 顯示對話
     for msg in st.session_state[current_tab_key]:
@@ -338,28 +429,28 @@ if selected == "對話":
         prompt = st.chat_input()
         if prompt:
             st.session_state['chat_started'] = True
-            client = OpenAI(api_key=st.session_state['chatbot_api_key'])
+            client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
             st.session_state[current_tab_key].append({"role": "user", "content": prompt})
             message_func(prompt, is_user=True)
-            
-            # 顯示 "Thinking..." 訊息
-            thinking_placeholder = st.empty()
-            st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
-            with thinking_placeholder.container():
-                message_func("Thinking...", is_user=False)
-            
-            if st.session_state['language']:
-                prompt = prompt + f" 除非我要求翻譯，否則請完全使用{st.session_state['language']}回答。你無需說「明白了我將使用{st.session_state['language']}回答」或「好的」之類的話。"
 
-            messages = st.session_state[current_tab_key][:-1] + [{"role": "user", "content": prompt}]
-            
-            response_message = get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'])
-            
-            # 清除 "Thinking..." 訊息並顯示真正的回應
-            st.session_state[current_tab_key].pop()
-            thinking_placeholder.empty()
-            st.session_state[current_tab_key].append({"role": "assistant", "content": response_message})
-            message_func(response_message, is_user=False)
+            async def stream_openai_response():
+                response_container = st.empty()
+                messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
+                full_response = ""
+                async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt']):
+                    full_response = response_message
+                    response_container.markdown(f"""
+                        <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
+                            <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                            <div class="message-container" style="background: #F1F1F1; color: black; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 0px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                                {format_message(response_message)} \n </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+                st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
+                response_container.empty()
+                message_func(full_response, is_user=False)
+
+            asyncio.run(stream_openai_response())
 
     elif st.session_state['model_type'] == "Llama3" and st.session_state['replicate_api_key']:
         prompt = st.chat_input()
@@ -368,24 +459,30 @@ if selected == "對話":
             st.session_state[current_tab_key].append({"role": "user", "content": prompt})
             message_func(prompt, is_user=True)
             
-            # 顯示 "Thinking..." 訊息
-            thinking_placeholder = st.empty()
-            st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
-            with thinking_placeholder.container():
-                message_func("Thinking...", is_user=False)
-            
-            if st.session_state['language']:
-                prompt = prompt + f" 除非我要求翻譯，否則請完全使用{st.session_state['language']}回答。你無需說「明白了我將使用{st.session_state['language']}回答」或「好的」之類的話。"
-            else:
-                prompt = prompt + f" 除非我要求翻譯，否則請完全使用繁體中文回答。你無需說「明白了我將使用繁體中文回答」或「好的」之類的話。"
-            
             response_message = generate_ollama_response(prompt, st.session_state[current_tab_key], st.session_state['llama_model'], st.session_state['llama_system_prompt'])
-            
-            # 清除 "Thinking..." 訊息並顯示真正的回應
-            st.session_state[current_tab_key].pop()
-            thinking_placeholder.empty()
             st.session_state[current_tab_key].append({"role": "assistant", "content": response_message})
             message_func(response_message, is_user=False)
+
+    elif st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key']:
+        prompt = st.chat_input()
+        if prompt:
+            st.session_state['chat_started'] = True
+            st.session_state[current_tab_key].append({"role": "user", "content": prompt})
+            message_func(prompt, is_user=True)
+            
+            response_message = generate_perplexity_response(
+                prompt, 
+                st.session_state['perplexity_model'], 
+                st.session_state['temperature'], 
+                st.session_state['top_p'], 
+                st.session_state['presence_penalty'], 
+                st.session_state['frequency_penalty'], 
+                st.session_state['max_tokens'], 
+                st.session_state[current_tab_key]
+            )
+            st.session_state[current_tab_key].append({"role": "assistant", "content": response_message})
+            message_func(response_message, is_user=False)
+
 
 elif selected == "模型設定":
     col1, col2 ,col3 = st.columns([2,2,1])
@@ -408,7 +505,7 @@ elif selected == "模型設定":
                 st.session_state['top_p'] = st.select_slider("選擇 Top P", options=[i/10.0 for i in range(11)], value=st.session_state.get('top_p', 1.0), help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。")
                 st.session_state['frequency_penalty'] = st.select_slider("選擇 Frequency Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('frequency_penalty', 0.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
             
-    else:
+    elif st.session_state['model_type'] == "Llama3":
         with col1:
             # 定義模型名稱的映射
             llama_model_options = {
@@ -436,8 +533,35 @@ elif selected == "模型設定":
                 st.session_state['llama_top_p'] = st.select_slider("選擇 Top P", options=[i/10.0 for i in range(11)], value=st.session_state.get('llama_top_p', 1.0), help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。")
                 st.session_state['llama_length_penalty'] = st.select_slider("選擇 Length Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('llama_length_penalty', 1.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
 
-elif selected == "提示詞":
+    elif st.session_state['model_type'] == "Perplexity":
+        with col1:
+            # 定義模型名稱的映射
+            perplexity_model_options = {
+                "llama-3-sonar-large-32k-online": "llama-3-sonar-large-32k-online",
+                "llama-3-sonar-large-32k-chat": "llama-3-sonar-large-32k-chat"
+            }
+            # 顯示簡化後的模型名稱
+            selected_model = st.selectbox("選擇 Perplexity 模型", list(perplexity_model_options.keys()), help="sonar-large-32k-online: 用於大型數據查詢和分析; sonar-large-32k-chat: 用於對話應用")
+    
+            # 將選擇的簡化名稱映射到完整名稱
+            st.session_state['perplexity_model'] = perplexity_model_options[selected_model]
+        with col2:
+            st.session_state['language'] = st.text_input("指定使用的語言", value=st.session_state.get('language'), help="預設使用繁體中文。如要英文，請直接用中文輸入「英文」。")
+        with col3:
+            st.session_state['max_tokens'] = st.number_input("Tokens 上限", min_value=0, value=st.session_state.get('max_tokens', 1000), help="要生成的最大標記數量。")
+        st.write("\n")
+        st.text_area("角色設定", value=st.session_state.get('perplexity_system_prompt', ''), placeholder="你是一個專業的數據分析師。你的目標是幫助用戶分析大型數據集，並提供深入的見解和建議。", help="用於給模型提供初始指導。", key="perplexity_system_prompt_input", on_change=update_perplexity_system_prompt)
+        st.write("\n")
+        with st.expander("模型參數", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.session_state['temperature'] = st.select_slider("選擇 Temperature", options=[i / 10.0 for i in range(21)], value=st.session_state.get('temperature', 0.5), help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。")
+            with col2:
+                st.session_state['top_p'] = st.select_slider("選擇 Top P", options=[i / 10.0 for i in range(11)], value=st.session_state.get('top_p', 1.0), help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。")
+            st.session_state['presence_penalty'] = st.select_slider("選擇 Presence Penalty", options=[i / 10.0 for i in range(-20, 21)], value=st.session_state.get('presence_penalty', 0.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
 
+
+elif selected == "提示詞":
     st.write("這是一個預留的空白頁面，用於將來的提示詞功能。")
 
 elif selected == "頭像":
