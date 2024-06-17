@@ -23,14 +23,6 @@ st.markdown("""
     .stButton > button:hover {
         background-color: #3399FF;
     }
-    .avatar-container img {
-        width: 100px; /* 固定顯示大小 */
-        height: 90px;
-        object-fit: cover;
-    }
-    .avatar-container {
-        margin-bottom: 1px;
-    }
     .stRadio {
         display: flex;
         justify-content: center;
@@ -58,10 +50,11 @@ avatars = {
     "Cat": get_image_as_base64("Images/Cat.png"),
     "Dog": get_image_as_base64("Images/Dog.png"),
     "Robot": get_image_as_base64("Images/Robot.png"),
+    "Asian Man": get_image_as_base64("Images/Asian Man.png"),
     "Asian Bearded Man": get_image_as_base64("Images/Asian Bearded Man.png"),
     "Asian Boy": get_image_as_base64("Images/Asian Boy.png"),
-    "Asian Woman": get_image_as_base64("Images/Asian Woman.png"),
     "Asian Rainbow Girl": get_image_as_base64("Images/Asian Rainbow Girl.png"),
+    "Asian Woman": get_image_as_base64("Images/Asian Woman.png"),
     "Asian Girl": get_image_as_base64("Images/Asian Girl.png"),
 }
 
@@ -80,7 +73,7 @@ if 'llama_top_p' not in st.session_state:
 if 'llama_presence_penalty' not in st.session_state:
     st.session_state['llama_presence_penalty'] = 0.0
 if 'llama_length_penalty' not in st.session_state:
-    st.session_state['llama_length_penalty'] = 1.0
+    st.session_state['llama_length_penalty'] = 0.0
 if 'llama_max_tokens' not in st.session_state:
     st.session_state['llama_max_tokens'] = 1000
 if 'llama_system_prompt' not in st.session_state:
@@ -129,9 +122,9 @@ else:
     st.session_state['user_avatar'] = st.session_state['user_avatar_llama3']
 
 def display_avatars():
-    cols = st.columns(5)
+    cols = st.columns(6)
     for i, (name, image) in enumerate(avatars.items()):
-        with cols[i % 5]:
+        with cols[i % 6]:
             st.image(f"data:image/png;base64,{image}", use_column_width=True)
             if st.button("選擇", key=name):
                 if st.session_state['model_type'] == "ChatGPT":
@@ -223,6 +216,13 @@ def reset_chat():
 def format_message(text):
     return text.replace('\n', '<br>')
 
+def update_gpt_system_prompt():
+    st.session_state['gpt_system_prompt'] = st.session_state['gpt_system_prompt_input']
+
+def update_llama_system_prompt():
+    st.session_state['llama_system_prompt'] = st.session_state['llama_system_prompt_input']
+
+
 def message_func(text, is_user=False, is_df=False):
     model_url = f"data:image/png;base64,{assistant_avatar}"
     user_url = f"data:image/png;base64,{st.session_state['user_avatar']}"
@@ -233,11 +233,11 @@ def message_func(text, is_user=False, is_df=False):
         message_alignment = "flex-end"
         message_bg_color = "linear-gradient(135deg, #00B2FF 0%, #006AFF 100%)"
         avatar_class = "user-avatar"
-        avatar_size = "width: 38px; height: 30;"
+        avatar_size = "width: 30px; height: 30;"
         st.markdown(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 5px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 10px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
@@ -270,7 +270,7 @@ def message_func(text, is_user=False, is_df=False):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: black; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 5px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: black; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 0px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                 </div>
                 """,
@@ -305,17 +305,6 @@ with st.sidebar:
             st.session_state['replicate_api_key'] = replicate_api_key_input
             os.environ["REPLICATE_API_TOKEN"] = replicate_api_key_input
             st.experimental_rerun()
-
-        # 定義模型名稱的映射
-        llama_model_options = {
-            "llama-3-8b-instruct": "meta/meta-llama-3-8b-instruct",
-            "llama-3-70b-instruct": "meta/meta-llama-3-70b-instruct"
-        }
-        # 顯示簡化後的模型名稱
-        selected_model = st.selectbox("選擇 Llama3 模型", list(llama_model_options.keys()))
-
-        # 將選擇的簡化名稱映射到完整名稱
-        st.session_state['llama_model'] = llama_model_options[selected_model]
         
         if not st.session_state['chat_started']:
             st.session_state[f"messages_Llama3_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？" if replicate_api_key_input else "請輸入您的 Replicate API Key"
@@ -327,7 +316,6 @@ with st.sidebar:
             if not st.session_state['chat_started']:
                 st.session_state[f"messages_ChatGPT_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？" if api_key_input else "請輸入您的 OpenAI API Key"
             st.experimental_rerun()
-        st.session_state['open_ai_model'] = st.selectbox("選擇 ChatGPT 模型", ["gpt-3.5-turbo", "gpt-4o"], index=["gpt-3.5-turbo", "gpt-4o"].index(st.session_state.get('open_ai_model', 'gpt-3.5-turbo')))
 
     st.divider()
     st.button("重置對話", on_click=lambda: st.session_state.update({'reset_confirmation': True}), use_container_width=True)
@@ -360,8 +348,7 @@ if selected == "對話":
             
             if st.session_state['language']:
                 prompt = prompt + f" 除非我要求翻譯，否則請完全使用{st.session_state['language']}回答。你無需說「明白了我將使用{st.session_state['language']}回答」或「好的」之類的話。"
-            else:
-                prompt = prompt + f" 除非我要求翻譯，否則請使用繁體中文回答。你無需說「明白了我將使用繁體中文回答」或「好的」之類的話。"
+
             messages = st.session_state[current_tab_key][:-1] + [{"role": "user", "content": prompt}]
             
             response_message = get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'])
@@ -399,14 +386,17 @@ if selected == "對話":
             message_func(response_message, is_user=False)
 
 elif selected == "模型設定":
-    col1, col2 = st.columns(2)
-    with col1:
-        st.session_state['language'] = st.text_input("指定使用的語言", value=st.session_state.get('language'), placeholder="繁體中文")
+    col1, col2 ,col3 = st.columns([2,2,1])
     if st.session_state['model_type'] == "ChatGPT":
+        with col1:
+            st.session_state['open_ai_model'] = st.selectbox("選擇 ChatGPT 模型", ["gpt-3.5-turbo", "gpt-4o"], index=["gpt-3.5-turbo", "gpt-4o"].index(st.session_state.get('open_ai_model', 'gpt-3.5-turbo')),help="4o：每百萬tokens = 20美元；3.5-turbo價格為其1/10")
         with col2:
-            st.session_state['max_tokens'] = st.number_input("Max Tokens", min_value=0, value=st.session_state.get('max_tokens', 1000), help="要生成的最大標記數量。")
+            st.session_state['language'] = st.text_input("指定使用的語言", value=st.session_state.get('language'), help="預設使用繁體中文。如要英文，請直接用中文輸入「英文」。")
+        with col3:
+            st.session_state['max_tokens'] = st.number_input("Tokens 上限", min_value=0, value=st.session_state.get('max_tokens', 1000), help="要生成的最大標記數量。")
+        st.text_area("角色設定", value=st.session_state.get('gpt_system_prompt', ''), placeholder="你是一個友好且資深的英文老師。你的目標是幫助使用者提高他們的語言能力，並且用簡單易懂的方式解釋概念。你應該耐心回答問題，並鼓勵學生提出更多問題。",help="用於給模型提供初始指導。", key="gpt_system_prompt_input", on_change=update_gpt_system_prompt)
+
         st.write("\n")
-        st.session_state['gpt_system_prompt'] = st.text_input("角色設定", value=st.session_state.get('gpt_system_prompt', ''), help="system prompt 用於給模型提供初始指導信息。")
         with st.expander("模型參數",expanded=True):
             col1, col2 = st.columns(2)
             with col1:
@@ -417,9 +407,22 @@ elif selected == "模型設定":
                 st.session_state['frequency_penalty'] = st.select_slider("選擇 Frequency Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('frequency_penalty', 0.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
             
     else:
+        with col1:
+            # 定義模型名稱的映射
+            llama_model_options = {
+                "llama-3-8b-instruct": "meta/meta-llama-3-8b-instruct",
+                "llama-3-70b-instruct": "meta/meta-llama-3-70b-instruct"
+            }
+            # 顯示簡化後的模型名稱
+            selected_model = st.selectbox("選擇 Llama3 模型", list(llama_model_options.keys()),help="70b-instruct：每百萬tokens = 2.75美元；8b-instruct：每百萬tokens = 0.25美元")
+
+            # 將選擇的簡化名稱映射到完整名稱
+            st.session_state['llama_model'] = llama_model_options[selected_model]
         with col2:
-            st.session_state['llama_max_tokens'] = st.number_input("Max Tokens", min_value=0, value=st.session_state.get('llama_max_tokens', 1000), help="要生成的最大標記數量。")
-        st.session_state['llama_system_prompt'] = st.text_input("角色設定", value=st.session_state.get('llama_system_prompt', ''), help="system prompt 用於給模型提供初始指導信息。")
+            st.session_state['language'] = st.text_input("指定使用的語言", value=st.session_state.get('language'), help="預設使用繁體中文。如要英文，請直接用中文輸入「英文」。")
+        with col3:
+            st.session_state['llama_max_tokens'] = st.number_input("Tokens 上限", min_value=0, value=st.session_state.get('llama_max_tokens', 1000), help="要生成的最大標記數量。")
+        st.text_area("角色設定", value=st.session_state.get('llama_system_prompt', ''),placeholder="你是一個專業的科技支援工程師。你的目標是幫助用戶解決各種技術問題，無論是硬體還是軟體問題。你應該詳細解釋解決方案，並確保用戶理解每一步驟。", help="用於給模型提供初始指導。", key="llama_system_prompt_input", on_change=update_llama_system_prompt)
         st.write("\n")
         with st.expander("模型參數",expanded=True):     
             col1, col2 = st.columns(2)
@@ -427,9 +430,8 @@ elif selected == "模型設定":
                 st.session_state['llama_temperature'] = st.select_slider("選擇 Temperature", options=[i/10.0 for i in range(11)], value=st.session_state.get('llama_temperature', 0.5), help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。")
                 st.session_state['llama_presence_penalty'] = st.select_slider("選擇 Presence Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('llama_presence_penalty', 0.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
             with col2:
-                st.session_state['llama_top_p'] = st.select_slider("選擇 Top P", options=[i/10.0 for i in range(11)], value=st.session_state.get('llama_top_p', 1.0), help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。")
-                st.session_state['llama_length_penalty'] = st.select_slider("選擇 Length Penalty", options=[i/10.0 for i in range(0, 51)], value=st.session_state.get('llama_length_penalty', 1.0), help="一個控制輸出長度的參數。如果 < 1，模型會傾向生成較短的輸出；如果 > 1，模型會傾向生成較長的輸出。")
-            
+                st.session_state['llama_top_p'] = st.select_slider("選擇 Top P", options=[i/10.0 for i in range(11)], value=st.session_state.get('llama_top_p', 1.0), help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。")
+                st.session_state['llama_length_penalty'] = st.select_slider("選擇 Length Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('llama_length_penalty', 1.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
 
 elif selected == "提示詞":
 
@@ -438,8 +440,8 @@ elif selected == "提示詞":
 elif selected == "頭像":
     st.markdown(f"""
         <div style='text-align: center;'>
-            <div style='display: inline-block; border-radius: 70%; overflow: hidden; border: 5px solid #3399FF;'>
-                <img src="data:image/png;base64,{st.session_state['user_avatar']}" style='width: 200px;'/>
+            <div style='display: inline-block; border-radius: 60%; overflow: hidden; border: 7px solid #3399FF;'>
+                <img src="data:image/png;base64,{st.session_state['user_avatar']}" style='width: 150px;'/>
             </div>
             <p>\n</p>
         </div>
