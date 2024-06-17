@@ -42,19 +42,21 @@ def get_image_as_base64(image_path):
 
 assistant_avatar_gpt = get_image_as_base64("Images/ChatGPT Logo.png")
 assistant_avatar_llama = get_image_as_base64("Images/Meta Logo.png")
-user_avatar_default = get_image_as_base64("Images/Pink Bear.png")
+user_avatar_default = get_image_as_base64("Images/Asian Bearded Man.png")
 logo_base64 = get_image_as_base64("Images/snow ai bot.png")
 
 avatars = {
     "Pink Bear": get_image_as_base64("Images/Pink Bear.png"),
     "Cat": get_image_as_base64("Images/Cat.png"),
     "Dog": get_image_as_base64("Images/Dog.png"),
+    "Rabbit": get_image_as_base64("Images/Rabbit.png"),
+    "Goat": get_image_as_base64("Images/Goat.png"),
     "Robot": get_image_as_base64("Images/Robot.png"),
     "Asian Man": get_image_as_base64("Images/Asian Man.png"),
     "Asian Bearded Man": get_image_as_base64("Images/Asian Bearded Man.png"),
     "Asian Boy": get_image_as_base64("Images/Asian Boy.png"),
     "Asian Rainbow Girl": get_image_as_base64("Images/Asian Rainbow Girl.png"),
-    "Asian Woman": get_image_as_base64("Images/Asian Woman.png"),
+    "Gym Woman": get_image_as_base64("Images/Gym Woman.png"),
     "Asian Girl": get_image_as_base64("Images/Asian Girl.png"),
 }
 
@@ -291,7 +293,7 @@ with st.sidebar:
             "container": {"padding": "0.5!important", "background-color": "#fafafa"},
             "icon": {"color": "orange", "font-size": "22px"}, 
             "nav-link": {"font-size": "19px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
-            "nav-link-selected": {"background-color": "#006AFF"},
+            "nav-link-selected": {"background-color": "#3399FF"},
         }
     )
     
@@ -394,8 +396,8 @@ elif selected == "模型設定":
             st.session_state['language'] = st.text_input("指定使用的語言", value=st.session_state.get('language'), help="預設使用繁體中文。如要英文，請直接用中文輸入「英文」。")
         with col3:
             st.session_state['max_tokens'] = st.number_input("Tokens 上限", min_value=0, value=st.session_state.get('max_tokens', 1000), help="要生成的最大標記數量。")
+        st.write("\n")
         st.text_area("角色設定", value=st.session_state.get('gpt_system_prompt', ''), placeholder="你是一個友好且資深的英文老師。你的目標是幫助使用者提高他們的語言能力，並且用簡單易懂的方式解釋概念。你應該耐心回答問題，並鼓勵學生提出更多問題。",help="用於給模型提供初始指導。", key="gpt_system_prompt_input", on_change=update_gpt_system_prompt)
-
         st.write("\n")
         with st.expander("模型參數",expanded=True):
             col1, col2 = st.columns(2)
@@ -422,6 +424,7 @@ elif selected == "模型設定":
             st.session_state['language'] = st.text_input("指定使用的語言", value=st.session_state.get('language'), help="預設使用繁體中文。如要英文，請直接用中文輸入「英文」。")
         with col3:
             st.session_state['llama_max_tokens'] = st.number_input("Tokens 上限", min_value=0, value=st.session_state.get('llama_max_tokens', 1000), help="要生成的最大標記數量。")
+        st.write("\n")
         st.text_area("角色設定", value=st.session_state.get('llama_system_prompt', ''),placeholder="你是一個專業的科技支援工程師。你的目標是幫助用戶解決各種技術問題，無論是硬體還是軟體問題。你應該詳細解釋解決方案，並確保用戶理解每一步驟。", help="用於給模型提供初始指導。", key="llama_system_prompt_input", on_change=update_llama_system_prompt)
         st.write("\n")
         with st.expander("模型參數",expanded=True):     
