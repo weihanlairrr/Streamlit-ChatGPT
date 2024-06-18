@@ -40,7 +40,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-
 def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
@@ -132,7 +131,6 @@ if 'user_avatar_llama3' not in st.session_state:
     st.session_state['user_avatar_llama3'] = user_avatar_default
 if 'user_avatar_perplexity' not in st.session_state:
     st.session_state['user_avatar_perplexity'] = user_avatar_default
-
 
 # 根據模型選擇設置 user_avatar
 if st.session_state['model_type'] == "ChatGPT":
@@ -273,7 +271,6 @@ def generate_perplexity_response(prompt, model, temperature, top_p, presence_pen
 def update_slider(key, value):
     st.session_state[key] = value
 
-
 def confirm_reset_chat():
     confirm, cancel = st.columns(2)
     with confirm:
@@ -306,7 +303,7 @@ def update_model_params():
     st.session_state['llama_top_p'] = st.session_state['llama_top_p_slider']
     st.session_state['llama_presence_penalty'] = st.session_state['llama_presence_penalty_slider']
     st.session_state['llama_length_penalty'] = st.session_state['llama_length_penalty_slider']
-    
+
 def format_message(text):
     return text.replace('\n', '<br>')
 
@@ -327,13 +324,13 @@ def message_func(text, is_user=False, is_df=False):
     if is_user:
         avatar_url = user_url
         message_alignment = "flex-end"
-        message_bg_color = "linear-gradient(135deg, #33CCFF 0%, #2a7cc9 100%)"
+        message_bg_color = "linear-gradient(135deg, #00B2FF 0%, #006AFF 100%)"
         avatar_class = "user-avatar"
         avatar_size = "width: 30px; height: 30;"
         st.markdown(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 10px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 10px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
@@ -342,7 +339,7 @@ def message_func(text, is_user=False, is_df=False):
         )
     else:
         message_alignment = "flex-start"
-        message_bg_color = "#f1f1f1"
+        message_bg_color = "#71797E"
         avatar_class = "bot-avatar"
         avatar_size = "width: 45px; height: 28px;"
         if assistant_avatar == assistant_avatar_llama:
@@ -366,7 +363,7 @@ def message_func(text, is_user=False, is_df=False):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 0px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                 </div>
                 """,
@@ -458,30 +455,38 @@ if selected == "對話":
             client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
             st.session_state[current_tab_key].append({"role": "user", "content": prompt})
             message_func(prompt, is_user=True)
-    
-            # 語言設定
-            if st.session_state['language']:
-                prompt = prompt + f" 請使用{st.session_state['language']}回答。你無需說「明白了我將使用{st.session_state['language']}回答」或「好的」之類的話。"
-    
+            
+            # 顯示 "Thinking..." 訊息
+            thinking_placeholder = st.empty()
+            st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
+            with thinking_placeholder.container():
+                message_func("Thinking...", is_user=False)
+            
+            response_container = st.empty()
+            messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
+            full_response = ""
+                
             async def stream_openai_response():
-                response_container = st.empty()
-                messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
-                full_response = ""
                 async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt']):
+                    # 清除 "Thinking..." 訊息並開始流式回覆
+                    if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
+                        st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
+                        thinking_placeholder.empty()
+                    
                     full_response = response_message
                     response_container.markdown(f"""
                         <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                             <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                            <div class="message-container" style="background: #F1F1F1; color: black; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 0px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                                {format_message(response_message)} \n </div>
+                            <div class="message-container" style="background: #71797E; color: white; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 0px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                                {format_message(full_response)} \n </div>
                         </div>
                     """, unsafe_allow_html=True)
+                
                 st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
                 response_container.empty()
                 message_func(full_response, is_user=False)
-    
-            asyncio.run(stream_openai_response())
 
+            asyncio.run(stream_openai_response())
 
     elif st.session_state['model_type'] == "Llama3" and st.session_state['replicate_api_key']:
         prompt = st.chat_input()
