@@ -327,7 +327,7 @@ def message_func(text, is_user=False, is_df=False):
     if is_user:
         avatar_url = user_url
         message_alignment = "flex-end"
-        message_bg_color = "linear-gradient(135deg, #33CCFF 0%, #2a7cc9 80%)"
+        message_bg_color = "linear-gradient(135deg, #33CCFF 0%, #2a7cc9 100%)"
         avatar_class = "user-avatar"
         avatar_size = "width: 30px; height: 30;"
         st.markdown(
