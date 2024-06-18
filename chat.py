@@ -487,6 +487,32 @@ if selected == "對話":
                 message_func(full_response, is_user=False)
 
             asyncio.run(stream_openai_response())
+
+    elif st.session_state['model_type'] == "Llama3" and st.session_state['replicate_api_key']:
+        prompt = st.chat_input()
+        if prompt:
+            st.session_state['chat_started'] = True
+            st.session_state[current_tab_key].append({"role": "user", "content": prompt})
+            message_func(prompt, is_user=True)
+            
+            # 顯示 "Thinking..." 訊息
+            thinking_placeholder = st.empty()
+            st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
+            with thinking_placeholder.container():
+                message_func("Thinking...", is_user=False)
+            
+            if st.session_state['language']:
+                prompt = prompt + f" 請使用{st.session_state['language']}回答。你的回答不需要提到你會使用{st.session_state['language']}。"
+            else:
+                prompt = prompt + f" 請使用繁體中文回答。你的回答不需要提到你會使用繁體中文。"
+            
+            response_message = generate_ollama_response(prompt, st.session_state[current_tab_key], st.session_state['llama_model'], st.session_state['llama_system_prompt'])
+            
+            # 清除 "Thinking..." 訊息並顯示真正的回應
+            st.session_state[current_tab_key].pop()
+            thinking_placeholder.empty()
+            st.session_state[current_tab_key].append({"role": "assistant", "content": response_message})
+            message_func(response_message, is_user=False)
             
     elif st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key']:
         prompt = st.chat_input()
