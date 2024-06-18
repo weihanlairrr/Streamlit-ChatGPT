@@ -12,8 +12,8 @@ st.markdown("""
     <style>
     .stButton > button {
         padding: 5px 20px;
-        background-color: #e0e0e0;
-        color: black;
+        background-color:#71797E;
+        color: white;
         border: none;
         border-radius: 5px;
         font-size: 18px;
@@ -22,7 +22,7 @@ st.markdown("""
         width: 100%;
     }
     .stButton > button:hover {
-        background-color: #0066CC;
+        background-color: #2a7cc9;
     }
     .stRadio {
         display: flex;
@@ -34,8 +34,12 @@ st.markdown("""
         width: fit-content;
         margin: 1px 0;
     }
+    .stSidebar {
+    background-color: #340f0f0;  /* 修改這裡可以更改sidebar背景色 */
+    }
     </style>
 """, unsafe_allow_html=True)
+
 
 def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
@@ -45,7 +49,7 @@ assistant_avatar_gpt = get_image_as_base64("Images/ChatGPT Logo.png")
 assistant_avatar_llama = get_image_as_base64("Images/Meta Logo.png")
 assistant_avatar_perplexity = get_image_as_base64("Images/Perplexity Logo.png")
 user_avatar_default = get_image_as_base64("Images/Asian Bearded Man.png")
-logo_base64 = get_image_as_base64("Images/snow ai bot.png")
+logo_base64 = get_image_as_base64("Images/Bot Logo.png")
 
 avatars = {
     "Pink Bear": get_image_as_base64("Images/Pink Bear.png"),
@@ -58,10 +62,11 @@ avatars = {
     "Asian Bearded Man": get_image_as_base64("Images/Asian Bearded Man.png"),
     "Asian Boy": get_image_as_base64("Images/Asian Boy.png"),
     "Asian Rainbow Girl": get_image_as_base64("Images/Asian Rainbow Girl.png"),
-    "Gym Woman": get_image_as_base64("Images/Gym Woman.png"),
+    "Asian Lady": get_image_as_base64("Images/Asian Lady.png"),
     "Asian Girl": get_image_as_base64("Images/Asian Girl.png"),
 }
 
+# 初始化狀態變量
 if 'chatbot_api_key' not in st.session_state:
     st.session_state['chatbot_api_key'] = ''
 if 'replicate_api_key' not in st.session_state:
@@ -69,9 +74,9 @@ if 'replicate_api_key' not in st.session_state:
 if 'perplexity_api_key' not in st.session_state:
     st.session_state['perplexity_api_key'] = ''
 if 'open_ai_model' not in st.session_state:
-    st.session_state['open_ai_model'] = 'gpt-3.5-turbo'
+    st.session_state['open_ai_model'] = 'gpt-4o'
 if 'llama_model' not in st.session_state:
-    st.session_state['llama_model'] = 'meta/meta-llama-3-8b-instruct'
+    st.session_state['llama_model'] = 'meta/meta-llama-3-70b-instruct'
 if 'perplexity_model' not in st.session_state:
     st.session_state['perplexity_model'] = 'llama-3-sonar-large-32k-online'
 if 'llama_temperature' not in st.session_state:
@@ -180,7 +185,8 @@ async def get_openai_response(client, model, messages, temperature, top_p, prese
             yield "您的 OpenAI API餘額不足，請至您的帳戶加值"
         elif isinstance(e, UnicodeEncodeError):
             yield "請輸入正確的 OpenAI API Key"
-        yield f"Error: {error_message}"
+        else:
+            yield f"Error: {error_message}"
 
 def generate_ollama_response(prompt, history, model, system_prompt):
     try:
@@ -217,8 +223,6 @@ def generate_ollama_response(prompt, history, model, system_prompt):
 
 def generate_perplexity_response(prompt, model, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, history):
     try:
-        import requests
-
         url = "https://api.perplexity.ai/chat/completions"
         headers = {
             "accept": "application/json",
@@ -266,6 +270,9 @@ def generate_perplexity_response(prompt, model, temperature, top_p, presence_pen
     except UnicodeEncodeError:
         return "請輸入正確的 Perplexity API Key"
 
+def update_slider(key, value):
+    st.session_state[key] = value
+
 
 def confirm_reset_chat():
     confirm, cancel = st.columns(2)
@@ -290,6 +297,16 @@ def reset_chat():
     st.session_state['chat_started'] = False
     st.session_state['api_key_removed'] = False
 
+def update_model_params():
+    st.session_state['temperature'] = st.session_state['temperature_slider']
+    st.session_state['top_p'] = st.session_state['top_p_slider']
+    st.session_state['presence_penalty'] = st.session_state['presence_penalty_slider']
+    st.session_state['frequency_penalty'] = st.session_state['frequency_penalty_slider']
+    st.session_state['llama_temperature'] = st.session_state['llama_temperature_slider']
+    st.session_state['llama_top_p'] = st.session_state['llama_top_p_slider']
+    st.session_state['llama_presence_penalty'] = st.session_state['llama_presence_penalty_slider']
+    st.session_state['llama_length_penalty'] = st.session_state['llama_length_penalty_slider']
+    
 def format_message(text):
     return text.replace('\n', '<br>')
 
@@ -310,7 +327,7 @@ def message_func(text, is_user=False, is_df=False):
     if is_user:
         avatar_url = user_url
         message_alignment = "flex-end"
-        message_bg_color = "linear-gradient(135deg, #3399FF 0%, #0066CC 100%)"
+        message_bg_color = "linear-gradient(135deg, #33CCFF 0%, #2a7cc9 80%)"
         avatar_class = "user-avatar"
         avatar_size = "width: 30px; height: 30;"
         st.markdown(
@@ -325,7 +342,7 @@ def message_func(text, is_user=False, is_df=False):
         )
     else:
         message_alignment = "flex-start"
-        message_bg_color = "#F1F1F1"
+        message_bg_color = "#f1f1f1"
         avatar_class = "bot-avatar"
         avatar_size = "width: 45px; height: 28px;"
         if assistant_avatar == assistant_avatar_llama:
@@ -349,7 +366,7 @@ def message_func(text, is_user=False, is_df=False):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: black; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 0px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 0px; font-size: 17px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                 </div>
                 """,
@@ -370,7 +387,7 @@ with st.sidebar:
             "container": {"padding": "0.5!important", "background-color": "#fafafa"},
             "icon": {"color": "orange", "font-size": "22px"}, 
             "nav-link": {"font-size": "19px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
-            "nav-link-selected": {"background-color": "#0066CC"},
+            "nav-link-selected": {"background-color": "#2a7cc9"},
         }
     )
     
@@ -383,6 +400,11 @@ with st.sidebar:
         if replicate_api_key_input != st.session_state['replicate_api_key']:
             st.session_state['replicate_api_key'] = replicate_api_key_input
             os.environ["REPLICATE_API_TOKEN"] = replicate_api_key_input
+            if not st.session_state['chat_started']:
+                if replicate_api_key_input:
+                    st.session_state[f"messages_Llama3_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？"
+                else:
+                    st.session_state[f"messages_Llama3_{st.session_state['current_tab']}"][0]['content'] = "請輸入您的 Replicate API Key"
             st.experimental_rerun()
         
         if not st.session_state['chat_started']:
@@ -392,6 +414,11 @@ with st.sidebar:
         perplexity_api_key_input = st.text_input("請輸入 Perplexity API Key", value=st.session_state.get('perplexity_api_key', ''), type="password")
         if perplexity_api_key_input != st.session_state['perplexity_api_key']:
             st.session_state['perplexity_api_key'] = perplexity_api_key_input
+            if not st.session_state['chat_started']:
+                if perplexity_api_key_input:
+                    st.session_state[f"messages_Perplexity_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？"
+                else:
+                    st.session_state[f"messages_Perplexity_{st.session_state['current_tab']}"][0]['content'] = "請輸入您的 Perplexity API Key"
             st.experimental_rerun()
         
         if not st.session_state['chat_started']:
@@ -409,7 +436,6 @@ with st.sidebar:
     st.button("重置對話", on_click=lambda: st.session_state.update({'reset_confirmation': True}), use_container_width=True)
     if st.session_state.get('reset_confirmation', False):
         confirm_reset_chat()
-
 
     current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
     if current_tab_key not in st.session_state:
@@ -432,7 +458,11 @@ if selected == "對話":
             client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
             st.session_state[current_tab_key].append({"role": "user", "content": prompt})
             message_func(prompt, is_user=True)
-
+    
+            # 語言設定
+            if st.session_state['language']:
+                prompt = prompt + f" 請使用{st.session_state['language']}回答。你無需說「明白了我將使用{st.session_state['language']}回答」或「好的」之類的話。"
+    
             async def stream_openai_response():
                 response_container = st.empty()
                 messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
@@ -449,8 +479,9 @@ if selected == "對話":
                 st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
                 response_container.empty()
                 message_func(full_response, is_user=False)
-
+    
             asyncio.run(stream_openai_response())
+
 
     elif st.session_state['model_type'] == "Llama3" and st.session_state['replicate_api_key']:
         prompt = st.chat_input()
@@ -459,7 +490,22 @@ if selected == "對話":
             st.session_state[current_tab_key].append({"role": "user", "content": prompt})
             message_func(prompt, is_user=True)
             
+            # 顯示 "Thinking..." 訊息
+            thinking_placeholder = st.empty()
+            st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
+            with thinking_placeholder.container():
+                message_func("Thinking...", is_user=False)
+            
+            if st.session_state['language']:
+                prompt = prompt + f" 請使用{st.session_state['language']}回答。你的回答不需要提到你會使用{st.session_state['language']}。"
+            else:
+                prompt = prompt + f" 請使用繁體中文回答。你的回答不需要提到你會使用繁體中文。"
+            
             response_message = generate_ollama_response(prompt, st.session_state[current_tab_key], st.session_state['llama_model'], st.session_state['llama_system_prompt'])
+            
+            # 清除 "Thinking..." 訊息並顯示真正的回應
+            st.session_state[current_tab_key].pop()
+            thinking_placeholder.empty()
             st.session_state[current_tab_key].append({"role": "assistant", "content": response_message})
             message_func(response_message, is_user=False)
 
@@ -470,6 +516,19 @@ if selected == "對話":
             st.session_state[current_tab_key].append({"role": "user", "content": prompt})
             message_func(prompt, is_user=True)
             
+            # 顯示 "Thinking..." 訊息
+            thinking_placeholder = st.empty()
+            st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
+            with thinking_placeholder.container():
+                message_func("Thinking...", is_user=False)
+            
+            if st.session_state['language']:
+                prompt = prompt + f" 請使用{st.session_state['language']}回答。你的回答不需要提到你會使用{st.session_state['language']}。"
+            else:
+                prompt = prompt + f" 請使用繁體中文回答。你的回答不需要提到你會使用繁體中文。"
+
+            messages = st.session_state[current_tab_key][:-1] + [{"role": "user", "content": prompt}]
+
             response_message = generate_perplexity_response(
                 prompt, 
                 st.session_state['perplexity_model'], 
@@ -480,41 +539,66 @@ if selected == "對話":
                 st.session_state['max_tokens'], 
                 st.session_state[current_tab_key]
             )
+            
+            # 清除 "Thinking..." 訊息並顯示真正的回應
+            st.session_state[current_tab_key].pop()
+            thinking_placeholder.empty()
             st.session_state[current_tab_key].append({"role": "assistant", "content": response_message})
             message_func(response_message, is_user=False)
 
-
-elif selected == "模型設定":
-    col1, col2 ,col3 = st.columns([2,2,1])
+if selected == "模型設定":
+    col1, col2, col3 = st.columns([2, 2, 1.5])
     if st.session_state['model_type'] == "ChatGPT":
         with col1:
-            st.session_state['open_ai_model'] = st.selectbox("選擇 ChatGPT 模型", ["gpt-3.5-turbo", "gpt-4o"], index=["gpt-3.5-turbo", "gpt-4o"].index(st.session_state.get('open_ai_model', 'gpt-3.5-turbo')),help="4o：每百萬tokens = 20美元；3.5-turbo價格為其1/10")
+            st.session_state['open_ai_model'] = st.selectbox("選擇 ChatGPT 模型", ["gpt-3.5-turbo", "gpt-4o"],
+                                                             index=["gpt-3.5-turbo", "gpt-4o"].index(
+                                                                 st.session_state.get('open_ai_model', 'gpt-4o')),
+                                                             help="4：每百萬tokens = 20美元；3.5-turbo價格為其1/10")
         with col2:
-            st.session_state['language'] = st.text_input("指定使用的語言", value=st.session_state.get('language'), help="預設使用繁體中文。如要英文，請直接用中文輸入「英文」。")
+            st.session_state['language'] = st.text_input("指定使用的語言", value=st.session_state.get('language'),
+                                                         help="預設使用繁體中文。如要英文，請直接用中文輸入「英文」。")
         with col3:
-            st.session_state['max_tokens'] = st.number_input("Tokens 上限", min_value=0, value=st.session_state.get('max_tokens', 1000), help="要生成的最大標記數量。")
+            st.session_state['max_tokens'] = st.number_input("Tokens 上限", min_value=0,
+                                                             value=st.session_state.get('max_tokens', 1000),
+                                                             help="要生成的最大標記數量。")
         st.write("\n")
-        st.text_area("角色設定", value=st.session_state.get('gpt_system_prompt', ''), placeholder="你是一個友好且資深的英文老師。你的目標是幫助使用者提高他們的語言能力，並且用簡單易懂的方式解釋概念。你應該耐心回答問題，並鼓勵學生提出更多問題。",help="用於給模型提供初始指導。", key="gpt_system_prompt_input", on_change=update_gpt_system_prompt)
+        st.text_area("角色設定", value=st.session_state.get('gpt_system_prompt', ''),
+                     placeholder="你是一個友好且資深的英文老師。你的目標是幫助使用者提高他們的語言能力，並且用簡單易懂的方式解釋概念。你應該耐心回答問題，並鼓勵學生提出更多問題。",
+                     help="用於給模型提供初始指導。", key="gpt_system_prompt_input", on_change=update_gpt_system_prompt)
         st.write("\n")
-        with st.expander("模型參數",expanded=True):
+        with st.expander("模型參數", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
-                st.session_state['temperature'] = st.select_slider("選擇 Temperature", options=[i/10.0 for i in range(11)], value=st.session_state.get('temperature', 0.5), help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。一般建議只更改此參數或 Top P 中的一個，而不要同時更改。")
-                st.session_state['presence_penalty'] = st.select_slider("選擇 Presence Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('presence_penalty', 0.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
+                st.slider("選擇 Temperature", 
+                          min_value=0.0, max_value=2.0, step=0.1, 
+                          value=st.session_state['temperature'], 
+                          help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。一般建議只更改此參數或 Top P 中的一個，而不要同時更改。",
+                          on_change=update_slider, args=(['temperature'],), kwargs={'value': st.session_state['temperature']})
+                st.slider("選擇 Presence Penalty", 
+                          min_value=-2.0, max_value=2.0, step=0.1, 
+                          value=st.session_state['presence_penalty'], 
+                          help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
+                          on_change=update_slider, args=(['presence_penalty'],), kwargs={'value': st.session_state['presence_penalty']})
             with col2:
-                st.session_state['top_p'] = st.select_slider("選擇 Top P", options=[i/10.0 for i in range(11)], value=st.session_state.get('top_p', 1.0), help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。")
-                st.session_state['frequency_penalty'] = st.select_slider("選擇 Frequency Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('frequency_penalty', 0.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
-            
+                st.slider("選擇 Top P", 
+                          min_value=0.0, max_value=1.0, step=0.1, 
+                          value=st.session_state['top_p'], 
+                          help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
+                          on_change=update_slider, args=(['top_p'],), kwargs={'value': st.session_state['top_p']})
+                st.slider("選擇 Frequency Penalty", 
+                          min_value=-2.0, max_value=2.0, step=0.1, 
+                          value=st.session_state['frequency_penalty'], 
+                          help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
+                          on_change=update_slider, args=(['frequency_penalty'],), kwargs={'value': st.session_state['frequency_penalty']})
     elif st.session_state['model_type'] == "Llama3":
         with col1:
             # 定義模型名稱的映射
             llama_model_options = {
-                "llama-3-8b-instruct": "meta/meta-llama-3-8b-instruct",
-                "llama-3-70b-instruct": "meta/meta-llama-3-70b-instruct"
+                "llama-3-70b-instruct": "meta/meta-llama-3-70b-instruct",
+                "llama-3-8b-instruct": "meta/meta-llama-3-8b-instruct"
             }
             # 顯示簡化後的模型名稱
             selected_model = st.selectbox("選擇 Llama3 模型", list(llama_model_options.keys()),help="70b-instruct：每百萬tokens = 2.75美元；8b-instruct：每百萬tokens = 0.25美元")
-
             # 將選擇的簡化名稱映射到完整名稱
             st.session_state['llama_model'] = llama_model_options[selected_model]
         with col2:
@@ -527,22 +611,36 @@ elif selected == "模型設定":
         with st.expander("模型參數",expanded=True):     
             col1, col2 = st.columns(2)
             with col1:
-                st.session_state['llama_temperature'] = st.select_slider("選擇 Temperature", options=[i/10.0 for i in range(11)], value=st.session_state.get('llama_temperature', 0.5), help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。")
-                st.session_state['llama_presence_penalty'] = st.select_slider("選擇 Presence Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('llama_presence_penalty', 0.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
+                st.slider("選擇 Temperature", 
+                          min_value=0.0, max_value=2.0, step=0.1, 
+                          value=st.session_state['llama_temperature'], 
+                          help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。",
+                          on_change=update_slider, args=(['llama_temperature'],), kwargs={'value': st.session_state['llama_temperature']})
+                st.slider("選擇 Presence Penalty", 
+                          min_value=-2.0, max_value=2.0, step=0.1, 
+                          value=st.session_state['llama_presence_penalty'], 
+                          help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
+                          on_change=update_slider, args=(['llama_presence_penalty'],), kwargs={'value': st.session_state['llama_presence_penalty']})
             with col2:
-                st.session_state['llama_top_p'] = st.select_slider("選擇 Top P", options=[i/10.0 for i in range(11)], value=st.session_state.get('llama_top_p', 1.0), help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。")
-                st.session_state['llama_length_penalty'] = st.select_slider("選擇 Length Penalty", options=[i/10.0 for i in range(-20, 21)], value=st.session_state.get('llama_length_penalty', 1.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
-
+                st.slider("選擇 Top P", 
+                          min_value=0.0, max_value=1.0, step=0.1, 
+                          value=st.session_state['llama_top_p'], 
+                          help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
+                          on_change=update_slider, args=(['llama_top_p'],), kwargs={'value': st.session_state['llama_top_p']})
+                st.slider("選擇 Length Penalty", 
+                          min_value=-2.0, max_value=2.0, step=0.1, 
+                          value=st.session_state['llama_length_penalty'], 
+                          help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
+                          on_change=update_slider, args=(['llama_length_penalty'],), kwargs={'value': st.session_state['llama_length_penalty']})
     elif st.session_state['model_type'] == "Perplexity":
         with col1:
             # 定義模型名稱的映射
             perplexity_model_options = {
-                "llama-3-sonar-large-32k-online": "llama-3-sonar-large-32k-online",
-                "llama-3-sonar-large-32k-chat": "llama-3-sonar-large-32k-chat"
+                "sonar-large-32k-online": "llama-3-sonar-large-32k-online",
+                "sonar-large-32k-chat": "llama-3-sonar-large-32k-chat"
             }
             # 顯示簡化後的模型名稱
             selected_model = st.selectbox("選擇 Perplexity 模型", list(perplexity_model_options.keys()), help="sonar-large-32k-online: 用於大型數據查詢和分析; sonar-large-32k-chat: 用於對話應用")
-    
             # 將選擇的簡化名稱映射到完整名稱
             st.session_state['perplexity_model'] = perplexity_model_options[selected_model]
         with col2:
@@ -555,11 +653,22 @@ elif selected == "模型設定":
         with st.expander("模型參數", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
-                st.session_state['temperature'] = st.select_slider("選擇 Temperature", options=[i / 10.0 for i in range(21)], value=st.session_state.get('temperature', 0.5), help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。")
+                st.slider("選擇 Temperature", 
+                          min_value=0.0, max_value=2.0, step=0.1, 
+                          value=st.session_state['temperature'], 
+                          help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。",
+                          on_change=update_slider, args=(['temperature'],), kwargs={'value': st.session_state['temperature']})
             with col2:
-                st.session_state['top_p'] = st.select_slider("選擇 Top P", options=[i / 10.0 for i in range(11)], value=st.session_state.get('top_p', 1.0), help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。")
-            st.session_state['presence_penalty'] = st.select_slider("選擇 Presence Penalty", options=[i / 10.0 for i in range(-20, 21)], value=st.session_state.get('presence_penalty', 0.0), help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。")
-
+                st.slider("選擇 Top P", 
+                          min_value=0.0, max_value=1.0, step=0.1, 
+                          value=st.session_state['top_p'], 
+                          help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。",
+                          on_change=update_slider, args=(['top_p'],), kwargs={'value': st.session_state['top_p']})
+            st.slider("選擇 Presence Penalty", 
+                      min_value=-2.0, max_value=2.0, step=0.1, 
+                      value=st.session_state['presence_penalty'], 
+                      help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
+                      on_change=update_slider, args=(['presence_penalty'],), kwargs={'value': st.session_state['presence_penalty']})
 
 elif selected == "提示詞":
     st.write("這是一個預留的空白頁面，用於將來的提示詞功能。")
@@ -567,7 +676,7 @@ elif selected == "提示詞":
 elif selected == "頭像":
     st.markdown(f"""
         <div style='text-align: center;'>
-            <div style='display: inline-block; border-radius: 60%; overflow: hidden; border: 7px solid #3399FF;'>
+            <div style='display: inline-block; border-radius: 60%; overflow: hidden; border: 7px solid #3a5b7b;'>
                 <img src="data:image/png;base64,{st.session_state['user_avatar']}" style='width: 150px;'/>
             </div>
             <p>\n</p>
