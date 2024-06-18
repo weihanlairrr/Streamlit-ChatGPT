@@ -22,7 +22,7 @@ st.markdown("""
         width: 100%;
     }
     .stButton > button:hover {
-        background-color: #2a7cc9;
+        background-color: #006AFF;
     }
     .stRadio {
         display: flex;
@@ -384,7 +384,7 @@ with st.sidebar:
             "container": {"padding": "0.5!important", "background-color": "#fafafa"},
             "icon": {"color": "orange", "font-size": "22px"}, 
             "nav-link": {"font-size": "19px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
-            "nav-link-selected": {"background-color": "#2a7cc9"},
+            "nav-link-selected": {"background-color": "#006AFF"},
         }
     )
     
