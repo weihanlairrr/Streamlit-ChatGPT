@@ -12,8 +12,8 @@ st.markdown("""
     <style>
     .stButton > button {
         padding: 5px 20px;
-        background-color:#71797E;
-        color: white;
+        background-color:#e0e0e0;
+        color: #2b2727;
         border: none;
         border-radius: 5px;
         font-size: 18px;
@@ -22,7 +22,7 @@ st.markdown("""
         width: 100%;
     }
     .stButton > button:hover {
-        background-color: #006AFF;
+        background-color: #007FF1;
     }
     .stRadio {
         display: flex;
@@ -47,23 +47,23 @@ def get_image_as_base64(image_path):
 assistant_avatar_gpt = get_image_as_base64("Images/ChatGPT Logo.png")
 assistant_avatar_llama = get_image_as_base64("Images/Meta Logo.png")
 assistant_avatar_perplexity = get_image_as_base64("Images/Perplexity Logo.png")
-user_avatar_default = get_image_as_base64("Images/Asian Bearded Man.png")
+user_avatar_default = get_image_as_base64("Images/Winter Cutie.png")
 logo_base64 = get_image_as_base64("Images/Bot Logo.png")
 
 avatars = {
-    "Pink Bear": get_image_as_base64("Images/Pink Bear.png"),
-    "Cat": get_image_as_base64("Images/Cat.png"),
-    "Dog": get_image_as_base64("Images/Dog.png"),
-    "Rabbit": get_image_as_base64("Images/Rabbit.png"),
-    "Goat": get_image_as_base64("Images/Goat.png"),
-    "Robot": get_image_as_base64("Images/Robot.png"),
-    "Asian Man": get_image_as_base64("Images/Asian Man.png"),
-    "Asian Bearded Man": get_image_as_base64("Images/Asian Bearded Man.png"),
-    "Asian Boy": get_image_as_base64("Images/Asian Boy.png"),
-    "Asian Rainbow Girl": get_image_as_base64("Images/Asian Rainbow Girl.png"),
-    "Asian Lady": get_image_as_base64("Images/Asian Lady.png"),
-    "Asian Girl": get_image_as_base64("Images/Asian Girl.png"),
-}
+    "Winter Cutie": get_image_as_base64("Images/Winter Cutie.png"),
+    "Winter Boy": get_image_as_base64("Images/Winter Boy.png"),
+    "Winter Penguin": get_image_as_base64("Images/Winter Penguin.png"),
+    "Winter Otter": get_image_as_base64("Images/Winter Otter.png"),
+    "Winter Bird": get_image_as_base64("Images/Winter Bird.png"),
+    "Winter White": get_image_as_base64("Images/Winter White.png"),
+    "Winter Black Bear": get_image_as_base64("Images/Winter Black Bear.png"),
+    "Winter Girl": get_image_as_base64("Images/Winter Girl.png"),
+    "Winter Baby Girl": get_image_as_base64("Images/Winter Baby Girl.png"),
+    "Winter Dog": get_image_as_base64("Images/Winter Dog.png"),
+    "Winter Chinese": get_image_as_base64("Images/Winter Chinese.png"),
+    "Winter Monkey": get_image_as_base64("Images/Winter Monkey.png"),
+    }
 
 # 初始化狀態變量
 if 'chatbot_api_key' not in st.session_state:
@@ -324,13 +324,13 @@ def message_func(text, is_user=False, is_df=False):
     if is_user:
         avatar_url = user_url
         message_alignment = "flex-end"
-        message_bg_color = "linear-gradient(135deg, #00B2FF 0%, #006AFF 100%)"
+        message_bg_color = "linear-gradient(135deg, #00C0FB 0%, #035DE5 100%)"
         avatar_class = "user-avatar"
         avatar_size = "width: 30px; height: 30;"
         st.markdown(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 10px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px; margin-right: 10px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
@@ -339,7 +339,7 @@ def message_func(text, is_user=False, is_df=False):
         )
     else:
         message_alignment = "flex-start"
-        message_bg_color = "#71797E"
+        message_bg_color = "#F1F1F1"
         avatar_class = "bot-avatar"
         avatar_size = "width: 45px; height: 28px;"
         if assistant_avatar == assistant_avatar_llama:
@@ -363,7 +363,7 @@ def message_func(text, is_user=False, is_df=False):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 10px; padding: 10px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                 </div>
                 """,
@@ -382,11 +382,12 @@ with st.sidebar:
         icons=['chat-left-dots','gear','journal-text','robot'], menu_icon="robot", default_index=0,
         styles={
             "container": {"padding": "0.5!important", "background-color": "#fafafa"},
-            "icon": {"color": "orange", "font-size": "22px"}, 
-            "nav-link": {"font-size": "19px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
-            "nav-link-selected": {"background-color": "#006AFF"},
+            "icon": {"color": "orange", "font-size": "21px"}, 
+            "nav-link": {"font-size": "20px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
+            "nav-link-selected": {"background-color": "#e0e0e0", "color": "#EF6D5A"},
         }
     )
+
     
     model_toggle = st.radio("", ["ChatGPT", "Llama3", "Perplexity"], key="model_type", horizontal=True)
     st.write("\n")
@@ -477,7 +478,7 @@ if selected == "對話":
                     response_container.markdown(f"""
                         <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                             <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                            <div class="message-container" style="background: #71797E; color: white; border-radius: 10px; padding: 10px; margin-right: 10px; margin-left: 0px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                            <div class="message-container" style="background: #F1F1F1; color: 2B2727; border-radius: 15px; padding: 10px; margin-right: 5x; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                                 {format_message(full_response)} \n </div>
                         </div>
                     """, unsafe_allow_html=True)
