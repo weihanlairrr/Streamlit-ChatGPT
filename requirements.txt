@@ -1,4 +1,7 @@
 streamlit
-openai
-streamlit-option-menu
+base64
+streamlit_option_menu
 replicate
+requests
+openai
+asyncio
