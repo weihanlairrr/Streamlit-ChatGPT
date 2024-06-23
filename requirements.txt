@@ -1,5 +1,4 @@
 streamlit
-base64
 streamlit_option_menu
 replicate
 requests
