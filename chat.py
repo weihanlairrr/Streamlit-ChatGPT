@@ -107,8 +107,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-
-
 def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
@@ -174,7 +172,6 @@ for key, default_value in [
     if key not in st.session_state:
         st.session_state[key] = default_value
 
-
 if f"messages_ChatGPT_{st.session_state['current_tab']}" not in st.session_state:
     st.session_state[f"messages_ChatGPT_{st.session_state['current_tab']}"] = chat_history.get('ChatGPT_1', [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}])
 
@@ -189,7 +186,7 @@ if st.session_state['model_type'] == "ChatGPT":
     st.session_state['user_avatar'] = st.session_state['user_avatar_chatgpt']
 else:
     st.session_state['user_avatar'] = st.session_state['user_avatar_perplexity']
-    
+
 def select_avatar(name, image):
     # 檢查頭像是否真的改變
     if st.session_state['model_type'] == "ChatGPT":
@@ -209,7 +206,6 @@ def select_avatar(name, image):
             # 設定標記，表示頭像已更新
             st.session_state['avatar_updated'] = True
 
-
 def display_avatars():
     cols = st.columns(6)
     for i, (name, image) in enumerate(avatars.items()):
@@ -225,7 +221,7 @@ async def get_openai_response(client, model, messages, temperature, top_p, prese
     try:
         if system_prompt:
             messages.insert(0, {"role": "system", "content": system_prompt})
-        
+
         if st.session_state['language']:
             prompt = messages[-1]['content'] + f" 請使用{st.session_state['language']}回答。你的回答不需要提到你會使用{st.session_state['language']}。"
             messages[-1]['content'] = prompt
@@ -334,7 +330,7 @@ def update_slider(key, value):
 
 def cancel_reset_chat():
     st.session_state['reset_confirmation'] = False
-    
+
 def confirm_reset_chat():
     confirm, cancel = st.columns(2)
     with confirm:
@@ -375,7 +371,6 @@ def format_message(text):
     html_content = markdown2.markdown(text)
     html_content = html_content.replace("&nbsp;", " ")
     return html_content
-
 
 def update_and_save_setting(key, value):
     st.session_state[key] = value
@@ -542,10 +537,10 @@ def update_exported_shortcuts():
         for shortcut in st.session_state['shortcuts']:
             if exported_shortcut['name'] == shortcut['name']:
                 exported_shortcut.update(shortcut)
-                
+
 if 'expander_state' not in st.session_state:
     st.session_state['expander_state'] = True
-    
+
 def hide_expander():
     st.session_state['expander_state'] = False
     st.session_state['active_shortcut'] = None
@@ -556,13 +551,13 @@ with st.sidebar:
                 <img src="data:image/png;base64,{logo_base64}" style="width: 100%; height: 100%; " />
             </div>
         """, unsafe_allow_html=True)
-    
+
     selected = option_menu("",
-        ["對話",'模型設定','提示詞','頭像'], 
+        ["對話",'模型設定','提示詞','頭像'],
         icons=['chat-dots-fill','gear-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
         styles={
             "container": {"padding": "0!important", "background": "linear-gradient(180deg, #e5e5e5 0%, #f5f5f5 80%)"},
-            "icon": {"color": "#FF8C00", "font-size": "18px"}, 
+            "icon": {"color": "#FF8C00", "font-size": "18px"},
             "nav-link": {"font-size": "18px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
             "nav-link-selected": {"background": "linear-gradient(135deg, rgba(83, 138, 217, 0.8) 0%, rgba(124, 45, 231, 0.8) 100%)", "color": "#F1f1f1"},
         }
@@ -625,24 +620,24 @@ if selected == "對話":
             client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
             st.session_state[current_tab_key].append({"role": "user", "content": prompt})
             message_func(prompt, is_user=True)
-            
+
             # 顯示 "Thinking..." 訊息
             thinking_placeholder = st.empty()
             st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
             with thinking_placeholder.container():
                 message_func("Thinking...", is_user=False)
-            
+
             response_container = st.empty()
             messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
             full_response = ""
-                
+
             async def stream_openai_response():
                 async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt']):
                     # 清除 "Thinking..." 訊息並開始流式回覆
                     if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
                         st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
                         thinking_placeholder.empty()
-                    
+
                     full_response = response_message
                     response_container.markdown(f"""
                         <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
@@ -651,15 +646,15 @@ if selected == "對話":
                                 {format_message(full_response)} \n </div>
                         </div>
                     """, unsafe_allow_html=True)
-                
+
                 st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
                 response_container.empty()
                 message_func(full_response, is_user=False)
                 chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[current_tab_key]
                 save_chat_history(chat_history)
-    
+
             asyncio.run(stream_openai_response())
-    
+
     if st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key']:
         prompt = st.chat_input()
         if prompt:
@@ -667,19 +662,19 @@ if selected == "對話":
             current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
             st.session_state[current_tab_key].append({"role": "user", "content": prompt})
             message_func(prompt, is_user=True)
-    
+
             # 顯示 "Thinking..." 訊息
             thinking_placeholder = st.empty()
             st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
             with thinking_placeholder.container():
                 message_func("Thinking...", is_user=False)
-    
+
             response_container = st.empty()
             full_response = ""
-    
+
             # 構建歷史對話
             history = st.session_state[current_tab_key]
-    
+
             # 處理流式回應並逐步更新界面
             for response_message in generate_perplexity_response(
                     prompt,
@@ -690,12 +685,12 @@ if selected == "對話":
                     st.session_state['presence_penalty'],
                     st.session_state['max_tokens'],
                     st.session_state['perplexity_system_prompt']):
-    
+
                 # 清除 "Thinking..." 訊息並開始流式回覆
                 if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
                     st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
                     thinking_placeholder.empty()
-    
+
                 full_response = response_message
                 response_container.markdown(
                     f"""
@@ -707,7 +702,7 @@ if selected == "對話":
                     """,
                     unsafe_allow_html=True
                 )
-    
+
             # 最後將完整的回應添加到會話狀態中
             st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
             response_container.empty()
@@ -726,7 +721,7 @@ if selected == "對話":
     # 當使用者點擊送出按鈕後的邏輯處理
     if 'active_shortcut' in st.session_state and st.session_state.get('active_shortcut') is not None:
         shortcut = st.session_state['active_shortcut']
-        inputs = {} 
+        inputs = {}
         expander_placeholder = st.empty()
         with expander_placeholder.expander(f'{shortcut["name"]}', expanded=True):
             for i, component in enumerate(shortcut['components']):
@@ -736,16 +731,16 @@ if selected == "對話":
                     inputs[component['label']] = st.selectbox(component['label'], component['options'], key=f'shortcut_selector_{i}')
                 elif component['type'] == "multi selector":
                     inputs[component['label']] = st.multiselect(component['label'], component['options'], key=f'shortcut_multi_selector_{i}')
-            
+
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("隱藏", on_click=hide_expander):
                     st.session_state['active_shortcut'] = None
                     expander_placeholder.empty()
-                        
+
             with col2:
                 提示詞模板 = st.button("送出")
-                    
+
         if 提示詞模板 and not st.session_state['prompt_submitted']:
             st.session_state['active_shortcut'] = None  # 立刻停止顯示 prompt template expander
             st.session_state['expander_state'] = False
@@ -756,10 +751,10 @@ if selected == "對話":
             try:
                 prompt = prompt_template.replace("{{", "{").replace("}}", "}")
                 st.session_state[current_tab_key].append({"role": "user", "content": prompt})
-        
+
                 # 使用 asyncio.run 來運行異步函數
                 asyncio.run(handle_prompt_submission(prompt, current_tab_key))
-        
+
                 # 將提示提交標記設為 True
                 st.session_state['prompt_submitted'] = True
             except KeyError as e:
@@ -789,25 +784,25 @@ if selected == "模型設定":
         with st.expander("模型參數", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
-                st.slider("選擇 Temperature", 
-                          min_value=0.0, max_value=2.0, step=0.1, 
-                          value=st.session_state['temperature'], 
+                st.slider("選擇 Temperature",
+                          min_value=0.0, max_value=2.0, step=0.1,
+                          value=st.session_state['temperature'],
                           help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。一般建議只更改此參數或 Top P 中的一個，而不要同時更改。",
                           on_change=update_and_save_setting, args=('temperature',), kwargs={'value': st.session_state['temperature']})
-                st.slider("選擇 Presence Penalty", 
-                          min_value=-2.0, max_value=2.0, step=0.1, 
-                          value=st.session_state['presence_penalty'], 
+                st.slider("選擇 Presence Penalty",
+                          min_value=-2.0, max_value=2.0, step=0.1,
+                          value=st.session_state['presence_penalty'],
                           help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
                           on_change=update_and_save_setting, args=('presence_penalty',), kwargs={'value': st.session_state['presence_penalty']})
             with col2:
-                st.slider("選擇 Top P", 
-                          min_value=0.0, max_value=1.0, step=0.1, 
-                          value=st.session_state['top_p'], 
+                st.slider("選擇 Top P",
+                          min_value=0.0, max_value=1.0, step=0.1,
+                          value=st.session_state['top_p'],
                           help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
                           on_change=update_and_save_setting, args=('top_p',), kwargs={'value': st.session_state['top_p']})
-                st.slider("選擇 Frequency Penalty", 
-                          min_value=-2.0, max_value=2.0, step=0.1, 
-                          value=st.session_state['frequency_penalty'], 
+                st.slider("選擇 Frequency Penalty",
+                          min_value=-2.0, max_value=2.0, step=0.1,
+                          value=st.session_state['frequency_penalty'],
                           help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
                           on_change=update_and_save_setting, args=('frequency_penalty',), kwargs={'value': st.session_state['frequency_penalty']})
     elif st.session_state['model_type'] == "Perplexity":
@@ -817,7 +812,7 @@ if selected == "模型設定":
                 "sonar-large-32k-online": "llama-3-sonar-large-32k-online",
                 "sonar-large-32k-chat": "llama-3-sonar-large-32k-chat",
                 "llama-3-70b-instruct": "llama-3-70b-instruct",
-                "llama-3-8b-instruct": "llama-3-8b-instruct"        
+                "llama-3-8b-instruct": "llama-3-8b-instruct"
             }
             # 顯示簡化後的模型名稱
             reverse_mapping = {v: k for k, v in perplexity_model_options.items()}
@@ -831,27 +826,26 @@ if selected == "模型設定":
         st.write("\n")
         st.text_area("角色設定", value=st.session_state.get('perplexity_system_prompt', ''),placeholder="你是一個專業的科技支援工程師。你的目標是幫助用戶解決各種技術問題，無論是硬體還是軟體問題。你應該詳細解釋解決方案，並確保用戶理解每一步驟。", help="用於給模型提供初始指導。", key="perplexity_system_prompt_input", on_change=update_perplexity_system_prompt, height=300)
         st.write("\n")
-        with st.expander("模型參數",expanded=True):     
+        with st.expander("模型參數",expanded=True):
             col1, col2 = st.columns(2)
             with col1:
-                st.slider("選擇 Temperature", 
-                          min_value=0.0, max_value=2.0, step=0.1, 
-                          value=st.session_state['temperature'], 
+                st.slider("選擇 Temperature",
+                          min_value=0.0, max_value=2.0, step=0.1,
+                          value=st.session_state['temperature'],
                           help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。",
                           on_change=update_and_save_setting, args=('temperature',), kwargs={'value': st.session_state['temperature']})
             with col2:
-                st.slider("選擇 Top P", 
-                          min_value=0.0, max_value=1.0, step=0.1, 
-                          value=st.session_state['top_p'], 
+                st.slider("選擇 Top P",
+                          min_value=0.0, max_value=1.0, step=0.1,
+                          value=st.session_state['top_p'],
                           help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
                           on_change=update_and_save_setting, args=('top_p',), kwargs={'value': st.session_state['top_p']})
-                
-            st.slider("選擇 Presence Penalty", 
-                          min_value=-2.0, max_value=2.0, step=0.1, 
-                          value=st.session_state['presence_penalty'], 
+
+            st.slider("選擇 Presence Penalty",
+                          min_value=-2.0, max_value=2.0, step=0.1,
+                          value=st.session_state['presence_penalty'],
                           help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
                           on_change=update_and_save_setting, args=('presence_penalty',), kwargs={'value': st.session_state['presence_penalty']})
-
 
     # 保存模型設置
     settings['open_ai_model'] = st.session_state['open_ai_model']
@@ -869,7 +863,7 @@ if selected == "模型設定":
     settings['frequency_penalty'] = st.session_state['frequency_penalty']
     settings['max_tokens'] = st.session_state['max_tokens']
     save_settings(settings)
-    
+
 if selected == "提示詞":
     # 初始化 session state 變量
     if 'shortcuts' not in st.session_state:
@@ -916,12 +910,12 @@ if selected == "提示詞":
             st.session_state['shortcut_names'].pop(index)
             st.session_state['current_shortcut'] = max(0, index - 1)
             st.session_state['delete_confirmation'] = None
-    
+
             st.session_state['exported_shortcuts'] = [
                 shortcut for shortcut in st.session_state['exported_shortcuts']
                 if shortcut['name'] != deleted_shortcut['name']
             ]
-    
+
             save_shortcuts()
             # 手動更新變數來觸發重繪
             st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
@@ -944,7 +938,6 @@ if selected == "提示詞":
         else:
             st.session_state['delete_confirmation'] = index
 
-
     def update_prompt_template(idx):
         st.session_state['shortcuts'][idx]['prompt_template'] = st.session_state[f'prompt_template_{idx}']
         update_exported_shortcuts()
@@ -961,16 +954,15 @@ if selected == "提示詞":
         if new_name != st.session_state['shortcuts'][idx]['name']:
             old_name = st.session_state['shortcuts'][idx]['name']
             st.session_state['shortcuts'][idx]['name'] = new_name
-    
+
             # 同步更新 exported_shortcuts 中的名稱
             for exported_shortcut in st.session_state['exported_shortcuts']:
                 if exported_shortcut['name'] == old_name:
                     exported_shortcut['name'] = new_name
-    
+
             save_shortcuts()
             # 手動更新變數來觸發重繪
             st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
-
 
     with st.sidebar:
         st.divider()
@@ -1008,11 +1000,11 @@ if selected == "提示詞":
                                 save_shortcuts()
                                 st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
                                 time.sleep(1)
-                                st.rerun()
+                                st.experimental_rerun()
                             else:
                                 st.markdown("<div class='custom-warning'>標籤為必填項目</div>", unsafe_allow_html=True)
                                 time.sleep(1)
-                                st.rerun()
+                                st.experimental_rerun()
 
                 elif component_type == "選單":
                     with st.expander("建立選單變數", expanded=True):
@@ -1028,11 +1020,11 @@ if selected == "提示詞":
                                 save_shortcuts()
                                 st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
                                 time.sleep(1)
-                                st.rerun()
+                                st.experimental_rerun()
                             else:
                                 st.markdown("<div class='custom-warning'>標籤和選項為必填項目</div>", unsafe_allow_html=True)
                                 time.sleep(1)
-                                st.rerun()
+                                st.experimental_rerun()
 
                 elif component_type == "多選選單":
                     with st.expander("建立多選選單變數", expanded=True):
@@ -1048,8 +1040,8 @@ if selected == "提示詞":
                                 save_shortcuts()
                                 st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
                                 time.sleep(1)
-                                st.rerun()
-                                
+                                st.experimental_rerun()
+
                 st.divider()
                 st.subheader("你的元件組合")
                 st.write("\n")
@@ -1067,7 +1059,7 @@ if selected == "提示詞":
                             del shortcut['components'][i]
                             update_exported_shortcuts()
                             save_shortcuts()
-                            st.rerun()
+                            st.experimental_rerun()
 
                 st.divider()
                 st.subheader("自訂提示詞公式")
@@ -1106,8 +1098,7 @@ if selected == "提示詞":
                             st.markdown("<div class='custom-success'>成功輸出，請至對話頁查看</div>", unsafe_allow_html=True)
                             time.sleep(1)
                             st.session_state['exported_shortcuts'].append(shortcut['name'])  # 防止按鈕再次出現
-                            st.rerun()
-
+                            st.experimental_rerun()
 
                 # 在tab內新增刪除按鈕，確保刪除當前tab
                 st.write("\n")
@@ -1118,6 +1109,7 @@ if selected == "提示詞":
 
                 if st.session_state.get('delete_confirmation') is not None:
                     confirm_delete_shortcut(st.session_state['delete_confirmation'])
+
 
 elif selected == "頭像":
     st.markdown(f"""
