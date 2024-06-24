@@ -6,6 +6,7 @@ from openai import AsyncOpenAI
 import asyncio
 import json
 import time
+import markdown2  # 取代 markdown
 
 # 保存和載入設置的函數
 def save_settings(settings):
@@ -81,8 +82,32 @@ st.markdown("""
     .stRadio > div {
         display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, rgba(3, 93, 229, 0.7) 100%);
     }
+    p {
+        margin: 0;  /* 移除 p 元素的預設邊距 */
+    }
+    .message {
+        white-space: pre-wrap;
+    }
+    .custom-success {
+        background-color: #d4edda;
+        color: black;
+        border-radius: 5px;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #c3e6cb;
+    }
+    .custom-warning {
+        background-color: #f8d7da;
+        color: black;
+        border-radius: 5px;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #f5c6cb;
+    }
     </style>
 """, unsafe_allow_html=True)
+
+
 
 def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
@@ -164,22 +189,37 @@ if st.session_state['model_type'] == "ChatGPT":
     st.session_state['user_avatar'] = st.session_state['user_avatar_chatgpt']
 else:
     st.session_state['user_avatar'] = st.session_state['user_avatar_perplexity']
+    
+def select_avatar(name, image):
+    # 檢查頭像是否真的改變
+    if st.session_state['model_type'] == "ChatGPT":
+        if st.session_state['user_avatar_chatgpt'] != image:
+            st.session_state['user_avatar_chatgpt'] = image
+            st.session_state['user_avatar'] = image  # 更新当前使用的头像
+            settings['user_avatar_chatgpt'] = image
+            save_settings(settings)
+            # 設定標記，表示頭像已更新
+            st.session_state['avatar_updated'] = True
+    else:
+        if st.session_state['user_avatar_perplexity'] != image:
+            st.session_state['user_avatar_perplexity'] = image
+            st.session_state['user_avatar'] = image  # 更新当前使用的头像
+            settings['user_avatar_perplexity'] = image
+            save_settings(settings)
+            # 設定標記，表示頭像已更新
+            st.session_state['avatar_updated'] = True
+
 
 def display_avatars():
     cols = st.columns(6)
     for i, (name, image) in enumerate(avatars.items()):
         with cols[i % 6]:
             st.image(f"data:image/png;base64,{image}", use_column_width=True)
-            if st.button("選擇", key=name):
-                if st.session_state['model_type'] == "ChatGPT":
-                    st.session_state['user_avatar_chatgpt'] = image
-                else:
-                    st.session_state['user_avatar_perplexity'] = image
-                st.session_state['user_avatar'] = image
-                settings['user_avatar_chatgpt'] = st.session_state['user_avatar_chatgpt']
-                settings['user_avatar_perplexity'] = st.session_state['user_avatar_perplexity']
-                save_settings(settings)
-                st.rerun()
+            st.button("選擇", key=name, on_click=select_avatar, args=(name, image))
+
+# 初始化狀態變量
+if 'avatar_selected' not in st.session_state:
+    st.session_state['avatar_selected'] = False
 
 async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt):
     try:
@@ -292,6 +332,9 @@ def update_slider(key, value):
         'frequency_penalty': st.session_state['frequency_penalty']
     })
 
+def cancel_reset_chat():
+    st.session_state['reset_confirmation'] = False
+    
 def confirm_reset_chat():
     confirm, cancel = st.columns(2)
     with confirm:
@@ -299,9 +342,8 @@ def confirm_reset_chat():
             reset_chat()
             st.rerun()
     with cancel:
-        if st.button("取消", key="cancel_reset"):
-            st.session_state['reset_confirmation'] = False
-            st.rerun()
+        if st.button("取消", key="cancel_reset", on_click=cancel_reset_chat):
+            pass
 
 def reset_chat():
     key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
@@ -330,7 +372,10 @@ def update_model_params():
     })
 
 def format_message(text):
-    return text.replace('\n', '<br>')
+    html_content = markdown2.markdown(text)
+    html_content = html_content.replace("&nbsp;", " ")
+    return html_content
+
 
 def update_and_save_setting(key, value):
     st.session_state[key] = value
@@ -377,8 +422,8 @@ def message_func(text, is_user=False, is_df=False):
         st.markdown(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px; margin-right: 10px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                        {text} \n </div>
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 10px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                        {format_message(text)} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
                 """,
@@ -410,13 +455,12 @@ def message_func(text, is_user=False, is_df=False):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {text} \n </div>
                 </div>
                 """,
             unsafe_allow_html=True,
         )
-
 
 async def handle_prompt_submission(prompt, current_tab_key):
     if st.session_state['model_type'] == "ChatGPT":
@@ -439,7 +483,7 @@ async def handle_prompt_submission(prompt, current_tab_key):
             response_container.markdown(f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                    <div class="message-container" style="background: #F1F1F1; color: 2B2727; border-radius: 15px; padding: 10px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: #F1F1F1; color: 2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {format_message(full_response)} \n </div>
                 </div>
             """, unsafe_allow_html=True)
@@ -480,7 +524,7 @@ async def handle_prompt_submission(prompt, current_tab_key):
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                         {format_message(full_response)} \n </div>
                 </div>
                 """,
@@ -498,6 +542,13 @@ def update_exported_shortcuts():
         for shortcut in st.session_state['shortcuts']:
             if exported_shortcut['name'] == shortcut['name']:
                 exported_shortcut.update(shortcut)
+                
+if 'expander_state' not in st.session_state:
+    st.session_state['expander_state'] = True
+    
+def hide_expander():
+    st.session_state['expander_state'] = False
+    st.session_state['active_shortcut'] = None
 
 with st.sidebar:
     st.markdown(f"""
@@ -675,7 +726,7 @@ if selected == "對話":
     # 當使用者點擊送出按鈕後的邏輯處理
     if 'active_shortcut' in st.session_state and st.session_state.get('active_shortcut') is not None:
         shortcut = st.session_state['active_shortcut']
-        inputs = {}
+        inputs = {} 
         expander_placeholder = st.empty()
         with expander_placeholder.expander(f'{shortcut["name"]}', expanded=True):
             for i, component in enumerate(shortcut['components']):
@@ -688,15 +739,16 @@ if selected == "對話":
             
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("隱藏"):
+                if st.button("隱藏", on_click=hide_expander):
                     st.session_state['active_shortcut'] = None
-                    st.rerun()
-                    
+                    expander_placeholder.empty()
+                        
             with col2:
                 提示詞模板 = st.button("送出")
                     
         if 提示詞模板 and not st.session_state['prompt_submitted']:
             st.session_state['active_shortcut'] = None  # 立刻停止顯示 prompt template expander
+            st.session_state['expander_state'] = False
             expander_placeholder.empty()
             prompt_template = shortcut['prompt_template'].replace("{", "{{").replace("}", "}}")
             for key in inputs.keys():
@@ -712,7 +764,6 @@ if selected == "對話":
                 st.session_state['prompt_submitted'] = True
             except KeyError as e:
                 st.error(f"缺少必需的輸入: {e}")
-
 
     # 在頁面載入時重置 prompt_submitted 標記
     if 'prompt_submitted' in st.session_state:
@@ -819,7 +870,7 @@ if selected == "模型設定":
     settings['max_tokens'] = st.session_state['max_tokens']
     save_settings(settings)
     
-elif selected == "提示詞":
+if selected == "提示詞":
     # 初始化 session state 變量
     if 'shortcuts' not in st.session_state:
         st.session_state['shortcuts'] = load_shortcuts()
@@ -829,17 +880,17 @@ elif selected == "提示詞":
         st.session_state['new_component'] = {"label": "", "options": ""}
     if 'shortcut_names' not in st.session_state:
         st.session_state['shortcut_names'] = [shortcut["name"] for shortcut in st.session_state['shortcuts']]
+    if 'exported_shortcuts' not in st.session_state:
+        st.session_state['exported_shortcuts'] = []
 
     def reset_new_component():
         st.session_state['new_component'] = {"label": "", "options": ""}
 
     def add_shortcut():
         if len(st.session_state['shortcuts']) >= 8:
-            placeholder = st.empty()
-            with placeholder.container():
-                st.warning("已達到 Shortcut 數量上限（8 個）")
-            time.sleep(2)
-            placeholder.empty()
+            st.markdown("<div class='custom-warning'>已達到 Shortcut 數量上限（8 個）</div>", unsafe_allow_html=True)
+            time.sleep(1)
+            st.experimental_rerun()
         else:
             existing_names = [shortcut['name'] for shortcut in st.session_state['shortcuts']]
             base_name = f"Shortcut {len(st.session_state['shortcuts']) + 1}"
@@ -848,7 +899,7 @@ elif selected == "提示詞":
             while new_name in existing_names:
                 counter += 1
                 new_name = f"{base_name} ({counter})"
-                
+
             new_shortcut = {
                 "name": new_name,
                 "components": [],
@@ -861,29 +912,35 @@ elif selected == "提示詞":
 
     def delete_shortcut(index):
         if len(st.session_state['shortcuts']) > 1:
-            deleted_shortcut = st.session_state['shortcuts'].pop(index)  # 儲存被刪除的 shortcut
+            deleted_shortcut = st.session_state['shortcuts'].pop(index)
             st.session_state['shortcut_names'].pop(index)
             st.session_state['current_shortcut'] = max(0, index - 1)
             st.session_state['delete_confirmation'] = None
     
-            # 從 exported_shortcuts 中移除對應的 shortcut
             st.session_state['exported_shortcuts'] = [
                 shortcut for shortcut in st.session_state['exported_shortcuts']
                 if shortcut['name'] != deleted_shortcut['name']
             ]
     
             save_shortcuts()
-            st.rerun()
-    
+            # 手動更新變數來觸發重繪
+            st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
+
+
+    def cancel_delete_shortcut():
+        st.session_state['delete_confirmation'] = None
+
     def confirm_delete_shortcut(index):
         if st.session_state.get('delete_confirmation') == index:
             confirm, cancel = st.columns(2)
             with confirm:
-                if st.button("確認", key=f"confirm_delete_{index}"):
+                if st.button("確認", key=f"confirm_delete_{index}_confirm"):
                     delete_shortcut(index)
+                    st.session_state['delete_confirmation'] = None  # Reset the confirmation state after deletion
+                    st.experimental_rerun()  # Rerun to reflect the deletion
             with cancel:
-                if st.button("取消", key=f"cancel_delete_{index}"):
-                    st.session_state['delete_confirmation'] = None
+                if st.button("取消", key=f"cancel_delete_{index}_cancel", on_click=cancel_delete_shortcut):
+                    pass
         else:
             st.session_state['delete_confirmation'] = index
 
@@ -893,10 +950,32 @@ elif selected == "提示詞":
         update_exported_shortcuts()
         save_shortcuts()
 
+    def update_exported_shortcuts():
+        for exported_shortcut in st.session_state.get('exported_shortcuts', []):
+            for shortcut in st.session_state['shortcuts']:
+                if exported_shortcut['name'] == shortcut['name']:
+                    exported_shortcut.update(shortcut)
+
+    def update_shortcut_name(idx):
+        new_name = st.session_state[f'shortcut_name_{idx}']
+        if new_name != st.session_state['shortcuts'][idx]['name']:
+            old_name = st.session_state['shortcuts'][idx]['name']
+            st.session_state['shortcuts'][idx]['name'] = new_name
+    
+            # 同步更新 exported_shortcuts 中的名稱
+            for exported_shortcut in st.session_state['exported_shortcuts']:
+                if exported_shortcut['name'] == old_name:
+                    exported_shortcut['name'] = new_name
+    
+            save_shortcuts()
+            # 手動更新變數來觸發重繪
+            st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
+
+
     with st.sidebar:
         st.divider()
         if st.button("新增提示詞"):
-            add_shortcut()   
+            add_shortcut()
 
     if st.session_state['shortcuts']:
         tabs = st.tabs([shortcut['name'] for shortcut in st.session_state['shortcuts']])
@@ -911,140 +990,133 @@ elif selected == "提示詞":
 
                 col1, col2 = st.columns([1, 2.5])
                 with col1:
-                    component_type = st.selectbox("選擇要新增的元件類型", ["text input", "selector", "multi selector"], key=f'component_type_{idx}')
+                    component_type = st.selectbox("選擇要新增的元件類型", ["文字輸入", "選單", "多選選單"], key=f'component_type_{idx}')
                 with col2:
-                    new_name = st.text_input("Shortcut 名稱", value=shortcut['name'], key=f'shortcut_name_{idx}')
+                    new_name = st.text_input("提示詞名稱", value=shortcut['name'], key=f'shortcut_name_{idx}', on_change=update_shortcut_name, args=(idx,))
                     if new_name.strip() == "":
-                        st.warning("名稱不能為空")
-                    elif new_name != shortcut['name']:
-                        shortcut['name'] = new_name
-                        st.session_state['shortcut_names'][idx] = new_name
-                        save_shortcuts()
-                        st.rerun()
-                
-                if component_type == "text input":
+                        st.markdown("<div class='custom-warning'>名稱不能為空</div>", unsafe_allow_html=True)
+
+                if component_type == "文字輸入":
                     with st.expander("建立文字變數", expanded=True):
                         label = st.text_input("變數名稱", value=st.session_state['new_component'].get('label', ''), key=f'text_input_label_{idx}')
-                        if st.button("新增 text input", key=f'add_text_input_{idx}'):
+                        if st.button("新增 文字輸入", key=f'add_text_input_{idx}'):
                             if label:
                                 shortcut['components'].append({"type": "text input", "label": label})
                                 st.session_state['new_component']['label'] = ''
                                 reset_new_component()
+                                update_exported_shortcuts()
                                 save_shortcuts()
-                                st.success("已成功新增")
-                                time.sleep(2)
+                                st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
+                                time.sleep(1)
                                 st.rerun()
                             else:
-                                st.warning("標籤為必填項目")
-                                time.sleep(2)
+                                st.markdown("<div class='custom-warning'>標籤為必填項目</div>", unsafe_allow_html=True)
+                                time.sleep(1)
                                 st.rerun()
-                
-                elif component_type == "selector":
+
+                elif component_type == "選單":
                     with st.expander("建立選單變數", expanded=True):
                         label = st.text_input("變數名稱", value=st.session_state['new_component'].get('label', ''), key=f'selector_label_{idx}')
                         options = st.text_area("輸入選項（每行一個）", value=st.session_state['new_component'].get('options', ''), key=f'selector_options_{idx}').split("\n")
-                        if st.button("新增 selector", key=f'add_selector_{idx}'):
+                        if st.button("新增 選單", key=f'add_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "selector", "label": label, "options": options})
                                 st.session_state['new_component']['label'] = ''
                                 st.session_state['new_component']['options'] = ''
                                 reset_new_component()
+                                update_exported_shortcuts()
                                 save_shortcuts()
-                                st.success("已成功新增")
-                                time.sleep(2)
+                                st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
+                                time.sleep(1)
                                 st.rerun()
                             else:
-                                st.warning("標籤和選項為必填項目")
-                                time.sleep(2)
+                                st.markdown("<div class='custom-warning'>標籤和選項為必填項目</div>", unsafe_allow_html=True)
+                                time.sleep(1)
                                 st.rerun()
-                
-                elif component_type == "multi selector":
+
+                elif component_type == "多選選單":
                     with st.expander("建立多選選單變數", expanded=True):
                         label = st.text_input("變數名稱", value=st.session_state['new_component'].get('label', ''), key=f'multi_selector_label_{idx}')
                         options = st.text_area("輸入選項（每行一個）", value=st.session_state['new_component'].get('options', ''), key=f'multi_selector_options_{idx}').split("\n")
-                        if st.button("新增 multi selector", key=f'add_multi_selector_{idx}'):
+                        if st.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "multi selector", "label": label, "options": options})
                                 st.session_state['new_component']['label'] = ''
                                 st.session_state['new_component']['options'] = ''
                                 reset_new_component()
+                                update_exported_shortcuts()
                                 save_shortcuts()
-                                st.success("已成功新增")
-                                time.sleep(2)
+                                st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
+                                time.sleep(1)
                                 st.rerun()
-                            else:
-                                st.warning("標籤和選項為必填項目")
-                                time.sleep(2)
-                                st.rerun()
-
-
-                with st.expander("你的元件組合"):
-                    cols = st.columns(2)
-                    for i, component in enumerate(shortcut['components']):
-                        col = cols[i % 2]
-                        with col:
-                            if component['type'] == "text input":
-                                st.text_input(component['label'], key=f'text_input_{idx}_{i}')
-                            elif component['type'] == "selector":
-                                st.selectbox(component['label'], component['options'], key=f'selector_{idx}_{i}')
-                            elif component['type'] == "multi selector":
-                                st.multiselect(component['label'], component['options'], key=f'multi_selector_{idx}_{i}')
-                            if st.button(f"刪除 {component['label']}", key=f'delete_{idx}_{i}'):
-                                del shortcut['components'][i]
-                                save_shortcuts()
-                                st.rerun()
-
+                                
                 st.divider()
-                with st.expander("自訂提示詞公式"):
-                    st.write("\n")
-                    col1, col2, col3 = st.columns([2, 0.1, 1.8])
-                    with col1:
-                        # 增加一個回調函數來處理prompt_template的變更
-                        def update_prompt_template(idx):
-                            st.session_state['shortcuts'][idx]['prompt_template'] = st.session_state[f'prompt_template_{idx}']
+                st.subheader("你的元件組合")
+                st.write("\n")
+                cols = st.columns(3)
+                for i, component in enumerate(shortcut['components']):
+                    col = cols[i % 3]
+                    with col:
+                        if component['type'] == "text input":
+                            st.text_input(component['label'], key=f'text_input_{idx}_{i}')
+                        elif component['type'] == "selector":
+                            st.selectbox(component['label'], component['options'], key=f'selector_{idx}_{i}')
+                        elif component['type'] == "multi selector":
+                            st.multiselect(component['label'], component['options'], key=f'multi_selector_{idx}_{i}')
+                        if st.button("刪除", key=f'delete_{idx}_{i}'):
+                            del shortcut['components'][i]
                             update_exported_shortcuts()
                             save_shortcuts()
-                        
-                        # 使用st.text_area並設置on_change回調
-                        st.text_area("", value=st.session_state[f'prompt_template_{idx}'], height=350, placeholder="用{ }代表標籤變數", key=f'prompt_template_{idx}', label_visibility="collapsed", on_change=update_prompt_template, args=(idx,))
-                    with col3:
-                        st.write("##### 提示詞預覽")
-                        inputs = {}
-                        for i, component in enumerate(shortcut['components']):
-                            if component['type'] == "text input":
-                                inputs[component['label']] = st.session_state.get(f'text_input_{idx}_{i}', "")
-                            elif component['type'] == "selector":
-                                inputs[component['label']] = st.session_state.get(f'selector_{idx}_{i}', "")
-                            elif component['type'] == "multi selector":
-                                inputs[component['label']] = st.session_state.get(f'multi_selector_{idx}_{i}', [])
-                    
-                        prompt_template = st.session_state[f'prompt_template_{idx}'].replace("{", "{{").replace("}", "}}")
-                        for key in inputs.keys():
-                            prompt_template = prompt_template.replace(f"{{{{{key}}}}}", f"{inputs[key]}")
-                        
-                        try:
-                            prompt = prompt_template.replace("{{", "{").replace("}}", "}")
-                            st.markdown(prompt.replace('\n', '  \n'))
-                        except KeyError as e:
-                            st.error(f"缺少必需的輸入: {e}")
-                
-                if len(st.session_state.get('exported_shortcuts', [])) < 4 and shortcut not in st.session_state.get('exported_shortcuts', []) and st.button("輸出到對話頁面", key=f'export_to_chat_{idx}'):
-                    if 'exported_shortcuts' not in st.session_state:
-                        st.session_state['exported_shortcuts'] = []
-                    st.session_state['exported_shortcuts'].append(shortcut)
-                    save_shortcuts()
-                    st.success("成功輸出，請至對話頁查看")
-                    time.sleep(2)
-                    st.rerun()
-                
+                            st.rerun()
+
+                st.divider()
+                st.subheader("自訂提示詞公式")
+                st.write("\n")
+                col1, col2, col3 = st.columns([2, 0.1, 1.8])
+                with col1:
+                    st.text_area("", value=st.session_state[f'prompt_template_{idx}'], height=350, placeholder="用{ }代表標籤變數", key=f'prompt_template_{idx}', label_visibility="collapsed", on_change=update_prompt_template, args=(idx,))
+                with col3:
+                    st.write("##### 提示詞預覽")
+                    inputs = {}
+                    for i, component in enumerate(shortcut['components']):
+                        if component['type'] == "text input":
+                            inputs[component['label']] = st.session_state.get(f'text_input_{idx}_{i}', "")
+                        elif component['type'] == "selector":
+                            inputs[component['label']] = st.session_state.get(f'selector_{idx}_{i}', "")
+                        elif component['type'] == "multi selector":
+                            inputs[component['label']] = st.session_state.get(f'multi_selector_{idx}_{i}', [])
+
+                    prompt_template = st.session_state[f'prompt_template_{idx}'].replace("{", "{{").replace("}", "}}")
+                    for key in inputs.keys():
+                        prompt_template = prompt_template.replace(f"{{{{{key}}}}}", f"{inputs[key]}")
+
+                    try:
+                        prompt = prompt_template.replace("{{", "{").replace("}}", "}")
+                        st.markdown(prompt.replace('\n', '  \n'))
+                    except KeyError as e:
+                        st.error(f"缺少必需的輸入: {e}")
+
+                if shortcut['components'] and st.session_state[f'prompt_template_{idx}'].strip():
+                    if len(st.session_state.get('exported_shortcuts', [])) < 4 and shortcut['name'] not in [s['name'] for s in st.session_state.get('exported_shortcuts', [])]:
+                        if st.button("輸出到對話頁面", key=f'export_to_chat_{idx}'):
+                            if 'exported_shortcuts' not in st.session_state:
+                                st.session_state['exported_shortcuts'] = []
+                            st.session_state['exported_shortcuts'].append(shortcut)
+                            save_shortcuts()
+                            st.markdown("<div class='custom-success'>成功輸出，請至對話頁查看</div>", unsafe_allow_html=True)
+                            time.sleep(1)
+                            st.session_state['exported_shortcuts'].append(shortcut['name'])  # 防止按鈕再次出現
+                            st.rerun()
+
+
                 # 在tab內新增刪除按鈕，確保刪除當前tab
+                st.write("\n")
                 if len(st.session_state['shortcuts']) > 1:
                     if st.button("刪除提示詞", key=f'delete_tab_{idx}'):
                         confirm_delete_shortcut(idx)
-                
+
                 if st.session_state.get('delete_confirmation') is not None:
                     confirm_delete_shortcut(st.session_state['delete_confirmation'])
-
 
 elif selected == "頭像":
     st.markdown(f"""
@@ -1061,4 +1133,4 @@ elif selected == "頭像":
 
     settings['user_avatar_chatgpt'] = st.session_state['user_avatar_chatgpt']
     settings['user_avatar_perplexity'] = st.session_state['user_avatar_perplexity']
-    save_settings(settings)
+    save_settings(settings) 
