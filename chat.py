@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 import asyncio
 import json
 import time
-import markdown2
+import markdown2  # 取代 markdown
 
 # 保存和載入設置的函數
 def save_settings(settings):
@@ -1112,7 +1112,8 @@ if selected == "提示詞":
                 # 在tab內新增刪除按鈕，確保刪除當前tab
                 st.write("\n")
                 if len(st.session_state['shortcuts']) > 1:
-                    if st.button("刪除提示詞", key=f'delete_tab_{idx}'):
+                    tab_name = shortcut['name']  # 獲取當前tab的名稱
+                    if st.button(f"刪除 {tab_name}", key=f'delete_tab_{idx}'):
                         confirm_delete_shortcut(idx)
 
                 if st.session_state.get('delete_confirmation') is not None:
