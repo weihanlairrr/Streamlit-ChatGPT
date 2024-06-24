@@ -4,3 +4,4 @@ replicate
 requests
 openai
 asyncio
+markdown2
