@@ -146,7 +146,7 @@ for key, default_value in [
     ('replicate_api_key', settings.get('replicate_api_key', '')),
     ('perplexity_api_key', settings.get('perplexity_api_key', '')),
     ('open_ai_model', settings.get('open_ai_model', 'gpt-4o')),
-    ('perplexity_model', settings.get('perplexity_model', 'llama-3-sonar-large-32k-chat')),
+    ('perplexity_model', settings.get('perplexity_model', 'llama-3-sonar-large-32k-online')),
     ('perplexity_temperature', settings.get('perplexity_temperature', 0.5)),
     ('perplexity_top_p', settings.get('perplexity_top_p', 0.5)),
     ('perplexity_presence_penalty', settings.get('perplexity_presence_penalty', 0.0)),
@@ -814,14 +814,14 @@ if selected == "模型設定":
         with col1:
             # 定義模型名稱的映射
             perplexity_model_options = {
-                "sonar-large-32k-chat": "llama-3-sonar-large-32k-chat",
                 "sonar-large-32k-online": "llama-3-sonar-large-32k-online",
+                "sonar-large-32k-chat": "llama-3-sonar-large-32k-chat",
                 "llama-3-70b-instruct": "llama-3-70b-instruct",
                 "llama-3-8b-instruct": "llama-3-8b-instruct"        
             }
             # 顯示簡化後的模型名稱
             reverse_mapping = {v: k for k, v in perplexity_model_options.items()}
-            selected_model_key = reverse_mapping.get(st.session_state['perplexity_model'], "sonar-large-32k-chat")
+            selected_model_key = reverse_mapping.get(st.session_state['perplexity_model'], "sonar-large-32k-online")
             selected_model = st.selectbox("選擇 Sonar 或 Llama3 模型", list(perplexity_model_options.keys()), index=list(perplexity_model_options.keys()).index(selected_model_key), help="70b-instruct：每百萬tokens = 2.75美元；8b-instruct：每百萬tokens = 0.25美元")
             st.session_state['perplexity_model'] = perplexity_model_options[selected_model]
         with col2:
