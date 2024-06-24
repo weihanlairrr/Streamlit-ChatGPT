@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 import asyncio
 import json
 import time
-import markdown2  # 取代 markdown
+import markdown2
 
 # 保存和載入設置的函數
 def save_settings(settings):
