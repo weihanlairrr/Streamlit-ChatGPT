@@ -180,6 +180,9 @@ if f"messages_Perplexity_{st.session_state['current_tab']}" not in st.session_st
 
 if 'tab_name_1' not in st.session_state:
     st.session_state['tab_name_1'] = "對話 1"
+    
+if 'reset_confirmed' not in st.session_state:
+    st.session_state['reset_confirmed'] = False
 
 # 根據模型選擇設置 user_avatar
 if st.session_state['model_type'] == "ChatGPT":
@@ -350,6 +353,7 @@ def reset_chat():
     st.session_state['reset_confirmation'] = False
     st.session_state['chat_started'] = False
     st.session_state['api_key_removed'] = False
+    st.session_state['reset_confirmed'] = True  # 設置標記為 True
 
     # 保存重置後的聊天歷史
     chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[key]
@@ -605,6 +609,9 @@ with st.sidebar:
                         st.session_state['active_shortcut'] = shortcut
 
 if selected == "對話":
+    if st.session_state['reset_confirmed']:
+        st.session_state['reset_confirmed'] = False
+        
     current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
     if current_tab_key not in st.session_state:
         st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
