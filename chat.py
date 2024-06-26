@@ -86,7 +86,7 @@ st.markdown("""
         margin: 0;  /* 移除 p 元素的預設邊距 */
     }
     h1, h2, h3, h4, h5, h6 {
-        margin: 0;
+        margin: 0;  /* 移除標題元素的預設邊距 */
     }
     .message {
         white-space: pre-wrap;
@@ -107,8 +107,12 @@ st.markdown("""
         margin: 10px 0;
         border: 1px solid #f5c6cb;
     }
+    .message-container h1, .message-container h2, .message-container h3, .message-container h4, .message-container h5, .message-container h6 {
+        margin-top: 1em;  /* 確保段落標題具有適當的上邊距 */
+    }
     </style>
 """, unsafe_allow_html=True)
+
 
 def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
