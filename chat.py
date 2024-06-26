@@ -659,7 +659,7 @@ if selected == "對話":
                     response_container.markdown(f"""
                         <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                             <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                            <div class="message-container" style="background: #F1F1F1; color: 2B2727; border-radius: 15px; padding: 10px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                            <div class="message-container" style="background: #F1F1F1; color: 2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                                 {format_message(full_response)} \n </div>
                         </div>
                     """, unsafe_allow_html=True)
@@ -713,7 +713,7 @@ if selected == "對話":
                     f"""
                     <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                         <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                        <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                        <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
                             {format_message(full_response)} \n </div>
                     </div>
                     """,
