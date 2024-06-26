@@ -483,6 +483,19 @@ async def handle_prompt_submission(prompt, current_tab_key):
         response_container = st.empty()
         messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
         full_response = ""
+        response_container.markdown(
+            """
+            <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start; min-width: 400px; min-height: 50px;">
+                <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all; min-width: 350px; min-height: 50px;">
+                    {full_response} \n
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        
         async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt']):
             if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
                 st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
