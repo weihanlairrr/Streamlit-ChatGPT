@@ -110,9 +110,11 @@ st.markdown("""
     .message-container h1, .message-container h2, .message-container h3, .message-container h4, .message-container h5, .message-container h6 {
         margin-top: 1em;  /* 確保段落標題具有適當的上邊距 */
     }
+    .message-container > :first-child h1, .message-container > :first-child h2, .message-container > :first-child h3, .message-container > :first-child h4, .message-container > :first-child h5, .message-container > :first-child h6 {
+        margin-top: 0;  /* 確保段落的第一個標題沒有上邊距 */
+    }
     </style>
 """, unsafe_allow_html=True)
-
 
 def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
