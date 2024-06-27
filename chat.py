@@ -741,23 +741,25 @@ if selected == "對話":
         inputs = {}
         form_placeholder = st.empty()
         with form_placeholder.form(key=f'prompt_template_form_{shortcut["name"]}'):
+            col1, col2 = st.columns(2)
             for i, component in enumerate(shortcut['components']):
-                if component['type'] == "text input":
-                    inputs[component['label']] = st.text_input(component['label'], key=f'shortcut_text_input_{i}')
-                elif component['type'] == "selector":
-                    inputs[component['label']] = st.selectbox(component['label'], component['options'], key=f'shortcut_selector_{i}')
-                elif component['type'] == "multi selector":
-                    inputs[component['label']] = st.multiselect(component['label'], component['options'], key=f'shortcut_multi_selector_{i}')
-
+                with col1 if i % 2 == 0 else col2:
+                    if component['type'] == "text input":
+                        inputs[component['label']] = st.text_input(component['label'], key=f'shortcut_text_input_{i}')
+                    elif component['type'] == "selector":
+                        inputs[component['label']] = st.selectbox(component['label'], component['options'], key=f'shortcut_selector_{i}')
+                    elif component['type'] == "multi selector":
+                        inputs[component['label']] = st.multiselect(component['label'], component['options'], key=f'shortcut_multi_selector_{i}')
+    
             col1, col2 = st.columns(2)
             with col1:
                 if st.form_submit_button("隱藏", on_click=hide_expander):
                     st.session_state['active_shortcut'] = None
                     form_placeholder.empty()
-
+    
             with col2:
-                提示詞模板 =  st.form_submit_button("送出")
-
+                提示詞模板 = st.form_submit_button("送出")
+    
         if 提示詞模板 and not st.session_state['prompt_submitted']:
             st.session_state['active_shortcut'] = None  # 立刻停止顯示 prompt template expander
             st.session_state['expander_state'] = False
@@ -768,14 +770,15 @@ if selected == "對話":
             try:
                 prompt = prompt_template.replace("{{", "{").replace("}}", "}")
                 st.session_state[current_tab_key].append({"role": "user", "content": prompt})
-
+    
                 # 使用 asyncio.run 來運行異步函數
                 asyncio.run(handle_prompt_submission(prompt, current_tab_key))
-
+    
                 # 將提示提交標記設為 True
                 st.session_state['prompt_submitted'] = True
             except KeyError as e:
                 st.error(f"缺少必需的輸入: {e}")
+
 
     # 在頁面載入時重置 prompt_submitted 標記
     if 'prompt_submitted' in st.session_state:
