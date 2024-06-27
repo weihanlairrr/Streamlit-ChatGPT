@@ -6,7 +6,8 @@ from openai import AsyncOpenAI
 import asyncio
 import json
 import time
-import markdown2  # 取代 markdown
+import markdown2
+import streamlit_shadcn_ui as ui
 
 # 保存和載入設置的函數
 def save_settings(settings):
@@ -108,13 +109,13 @@ st.markdown("""
         border: 1px solid #f5c6cb;
     }
     .message-container h1, .message-container h2, .message-container h3, .message-container h4, .message-container h5, .message-container h6 {
-        margin-top: 1em;  /* 確保段落標題具有適當的上邊距 */
+        margin-top: 1em; 
     }
     .message-container > :first-child h1, .message-container > :first-child h2, .message-container > :first-child h3, .message-container > :first-child h4, .message-container > :first-child h5, .message-container > :first-child h6 {
-        margin-top: 0;  /* 確保段落的第一個標題沒有上邊距 */
+        margin-top: 0; 
     }
     </style>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
@@ -615,8 +616,9 @@ with st.sidebar:
         if api_key_entered and 'exported_shortcuts' in st.session_state:
             with st.expander('你的提示詞'):
                 for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
-                    if st.button(shortcut['name'], key=f'exported_shortcut_{idx}'):
-                        st.session_state['active_shortcut'] = shortcut
+                    col = st.columns(1)[0]  # 使用寬度為100%的單列
+                    with col:
+                        ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background-color": "#5A5A5A", "color": "#f1f1f1"})
 
 if selected == "對話":
     if st.session_state['reset_confirmed']:
