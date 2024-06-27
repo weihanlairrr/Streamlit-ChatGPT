@@ -761,7 +761,7 @@ if selected == "對話":
                 提示詞模板 = st.form_submit_button("送出")
     
         if 提示詞模板 and not st.session_state['prompt_submitted']:
-            st.session_state['active_shortcut'] = None  # 立刻停止顯示 prompt template expander
+            st.session_state['active_shortcut'] = None
             st.session_state['expander_state'] = False
             form_placeholder.empty()
             prompt_template = shortcut['prompt_template'].replace("{", "{{").replace("}", "}}")
@@ -771,14 +771,11 @@ if selected == "對話":
                 prompt = prompt_template.replace("{{", "{").replace("}}", "}")
                 st.session_state[current_tab_key].append({"role": "user", "content": prompt})
     
-                # 使用 asyncio.run 來運行異步函數
                 asyncio.run(handle_prompt_submission(prompt, current_tab_key))
     
-                # 將提示提交標記設為 True
                 st.session_state['prompt_submitted'] = True
             except KeyError as e:
                 st.error(f"缺少必需的輸入: {e}")
-
 
     # 在頁面載入時重置 prompt_submitted 標記
     if 'prompt_submitted' in st.session_state:
