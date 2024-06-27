@@ -618,7 +618,9 @@ with st.sidebar:
                 for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
                     col = st.columns(1)[0]  # 使用寬度為100%的單列
                     with col:
-                        ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background-color": "#5A5A5A", "color": "#f1f1f1"})
+                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background-color": "#5A5A5A", "color": "#f1f1f1"}):
+                            st.session_state['active_shortcut'] = shortcut
+                        
 
 if selected == "對話":
     if st.session_state['reset_confirmed']:
