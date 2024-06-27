@@ -739,8 +739,8 @@ if selected == "對話":
     if 'active_shortcut' in st.session_state and st.session_state.get('active_shortcut') is not None:
         shortcut = st.session_state['active_shortcut']
         inputs = {}
-        expander_placeholder = st.empty()
-        with expander_placeholder.expander(f'{shortcut["name"]}', expanded=True):
+        form_placeholder = st.empty()
+        with form_placeholder.form(key=f'prompt_template_form_{shortcut["name"]}'):
             for i, component in enumerate(shortcut['components']):
                 if component['type'] == "text input":
                     inputs[component['label']] = st.text_input(component['label'], key=f'shortcut_text_input_{i}')
@@ -751,17 +751,17 @@ if selected == "對話":
 
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("隱藏", on_click=hide_expander):
+                if st.form_submit_button("隱藏", on_click=hide_expander):
                     st.session_state['active_shortcut'] = None
-                    expander_placeholder.empty()
+                    form_placeholder.empty()
 
             with col2:
-                提示詞模板 = st.button("送出")
+                提示詞模板 =  st.form_submit_button("送出")
 
         if 提示詞模板 and not st.session_state['prompt_submitted']:
             st.session_state['active_shortcut'] = None  # 立刻停止顯示 prompt template expander
             st.session_state['expander_state'] = False
-            expander_placeholder.empty()
+            form_placeholder.empty()
             prompt_template = shortcut['prompt_template'].replace("{", "{{").replace("}", "}}")
             for key in inputs.keys():
                 prompt_template = prompt_template.replace(f"{{{{{key}}}}}", f"{inputs[key]}")
