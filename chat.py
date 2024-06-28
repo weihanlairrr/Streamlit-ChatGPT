@@ -8,6 +8,7 @@ import json
 import time
 import markdown2
 import streamlit_shadcn_ui as ui
+import re
 
 # 保存和載入設置的函數
 def save_settings(settings):
@@ -109,13 +110,38 @@ st.markdown("""
         border: 1px solid #f5c6cb;
     }
     .message-container h1, .message-container h2, .message-container h3, .message-container h4, .message-container h5, .message-container h6 {
-        margin-top: 1em;  /* 確保段落標題具有適當的上邊距 */
+        margin-top: 1em; 
     }
     .message-container > :first-child h1, .message-container > :first-child h2, .message-container > :first-child h3, .message-container > :first-child h4, .message-container > :first-child h5, .message-container > :first-child h6 {
-        margin-top: 0;  /* 確保段落的第一個標題沒有上邊距 */
+        margin-top: 0;  
+    }
+    .message-container pre {
+        background-color: #2B2B2B;
+        border-radius: 5px;
+        padding: 10px;
+        overflow-x: auto;
+        margin: 10px 0;
+    }
+    .message-container pre code {
+        font-family: 'Source Code Pro', 'Courier New', monospace;
+        font-size: 15px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        color: #f1f1f1;
+    }
+    .message-container code:not(pre code) {
+        background: white;
+        color: #2B2727;  
+        font-size: 15px;
+        border-radius: 4px;
+        display: inline-flex; 
+        align-items: center; 
+        padding: 2px 4px;
     }
     </style>
 """, unsafe_allow_html=True)
+
+
 
 def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
@@ -382,9 +408,25 @@ def update_model_params():
     })
 
 def format_message(text):
+    if isinstance(text, (list, dict)):
+        return f"<pre><code>{json.dumps(text, indent=2)}</code></pre>"
+
+    # 定義正則表達式來匹配反三引號
+    code_pattern = re.compile(r'(```)(.*?)(```|$)', re.DOTALL)
+
+    def code_replacer(match):
+        code = match.group(2).strip()
+        return f'<pre><code>{code}</code></pre>'
+
+    # 使用正則表達式替換反三引號包裹的內容
+    text = code_pattern.sub(code_replacer, text)
+
+    # 將剩餘的文本轉換為 HTML
     html_content = markdown2.markdown(text)
+
     html_content = html_content.replace("&nbsp;", " ")
     return html_content
+
 
 def update_and_save_setting(key, value):
     st.session_state[key] = value
@@ -472,6 +514,7 @@ def message_func(text, is_user=False, is_df=False):
             unsafe_allow_html=True,
         )
 
+
 async def handle_prompt_submission(prompt, current_tab_key):
     if st.session_state['model_type'] == "ChatGPT":
         client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
@@ -490,14 +533,19 @@ async def handle_prompt_submission(prompt, current_tab_key):
             if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
                 st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
                 thinking_placeholder.empty()
-            full_response = response_message
-            response_container.markdown(f"""
-                <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
-                    <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                    <div class="message-container" style="background: #F1F1F1; color: 2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                        {format_message(full_response)} \n </div>
-                </div>
-            """, unsafe_allow_html=True)
+            full_response += response_message  # 累積回應
+
+        # 處理 `[object Object]` 問題
+        full_response = full_response.replace("[object Object]", "")
+        full_response = format_message(full_response)  # 格式化回應內容
+        formatted_response = f"```python\n{full_response}\n```"  # 使用三個反引號包裹程式碼
+        response_container.markdown(f"""
+            <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
+                <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                <div class="message-container" style="background: #F1F1F1; color: 2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                    {formatted_response} \n </div>
+            </div>
+        """, unsafe_allow_html=True)
         st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
         response_container.empty()
         message_func(full_response, is_user=False)
@@ -531,12 +579,14 @@ async def handle_prompt_submission(prompt, current_tab_key):
                 thinking_placeholder.empty()
 
             full_response = response_message
+            full_response = full_response.replace("[object Object]", "")
+            formatted_response = f"```python\n{full_response}\n```"
             response_container.markdown(
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
                     <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                        {format_message(full_response)} \n </div>
+                        {formatted_response} \n </div>
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -619,7 +669,7 @@ with st.sidebar:
                 for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
                     col = st.columns(1)[0]  # 使用寬度為100%的單列
                     with col:
-                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "linear-gradient(-135deg, #5A5A5A 0%, #70797E 100%)", "color": "#f1f1f1"}):
+                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "linear-gradient(135deg, #5A5A5A 0%, #2B2B2B 100%)", "color": "#f1f1f1"}):
                             st.session_state['active_shortcut'] = shortcut
                         
 
