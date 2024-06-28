@@ -109,13 +109,13 @@ st.markdown("""
         border: 1px solid #f5c6cb;
     }
     .message-container h1, .message-container h2, .message-container h3, .message-container h4, .message-container h5, .message-container h6 {
-        margin-top: 1em; 
+        margin-top: 1em;  /* 確保段落標題具有適當的上邊距 */
     }
     .message-container > :first-child h1, .message-container > :first-child h2, .message-container > :first-child h3, .message-container > :first-child h4, .message-container > :first-child h5, .message-container > :first-child h6 {
-        margin-top: 0; 
+        margin-top: 0;  /* 確保段落的第一個標題沒有上邊距 */
     }
     </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 def get_image_as_base64(image_path):
     with open(image_path, "rb") as image_file:
@@ -618,7 +618,7 @@ with st.sidebar:
                 for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
                     col = st.columns(1)[0]  # 使用寬度為100%的單列
                     with col:
-                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background-color": "#5A5A5A", "color": "#f1f1f1"}):
+                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "linear-gradient(-135deg, #5A5A5A 0%, #70797E 100%)", "color": "#f1f1f1"}):
                             st.session_state['active_shortcut'] = shortcut
                         
 
