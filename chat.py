@@ -116,7 +116,7 @@ st.markdown("""
         margin-top: 0;  
     }
     .message-container pre {
-        background-color: #2B2B2B;
+        background-color: #1E1E1E;
         border-radius: 5px;
         padding: 10px;
         overflow-x: auto;
@@ -130,13 +130,26 @@ st.markdown("""
         color: #f1f1f1;
     }
     .message-container code:not(pre code) {
-        background: white;
-        color: #2B2727;  
-        font-size: 15px;
+        background: #1E1E1E;
+        color: #f1f1f1;  
+        font-size: 13px;
         border-radius: 4px;
         display: inline-flex; 
         align-items: center; 
         padding: 2px 4px;
+        margin: 2px 2px;
+    }
+    .stCodeBlock button {
+        color: white !important;
+    }
+    .stCodeBlock button svg {
+        stroke: white !important;
+    }
+    .stCodeBlock button:hover {
+        color: white !important;
+    }
+    .stCodeBlock button:hover svg {
+        stroke: white !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -501,18 +514,17 @@ def message_func(text, is_user=False, is_df=False):
             st.write(text)
             return
         else:
-            text = format_message(text)
 
-        st.markdown(
-            f"""
-                <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
-                    <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                        {text} \n </div>
-                </div>
-                """,
-            unsafe_allow_html=True,
-        )
+            st.markdown(
+                f"""
+                    <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
+                        <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
+                        <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                            {text} \n </div>
+                    </div>
+                    """,
+                unsafe_allow_html=True,
+            )
 
 
 async def handle_prompt_submission(prompt, current_tab_key):
