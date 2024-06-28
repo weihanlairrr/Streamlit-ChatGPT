@@ -487,11 +487,12 @@ def message_func(text, is_user=False, is_df=False):
         message_bg_color = "linear-gradient(135deg, #00C0FB 0%, #035DE5 100%)"
         avatar_class = "user-avatar"
         avatar_size = "width: 30px; height: 30;"
+        text_with_line_breaks = text.replace("\n", "<br>")
         st.markdown(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 10px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                        {format_message(text)} \n </div>
+                        {text_with_line_breaks} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
                 """,
@@ -517,12 +518,13 @@ def message_func(text, is_user=False, is_df=False):
             st.write(text)
             return
         else:
+            formatted_message = format_message(text)
             st.markdown(
                 f"""
                     <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                         <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                         <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                            {format_message(text)} \n </div>
+                            {formatted_message} \n </div>
                     </div>
                     """,
                 unsafe_allow_html=True,
@@ -1030,6 +1032,7 @@ if selected == "提示詞":
         update_exported_shortcuts()
         save_shortcuts()
 
+
     def update_exported_shortcuts():
         for exported_shortcut in st.session_state.get('exported_shortcuts', []):
             for shortcut in st.session_state['shortcuts']:
@@ -1164,17 +1167,18 @@ if selected == "提示詞":
                             inputs[component['label']] = st.session_state.get(f'selector_{idx}_{i}', "")
                         elif component['type'] == "multi selector":
                             inputs[component['label']] = st.session_state.get(f'multi_selector_{idx}_{i}', [])
-
+                
                     prompt_template = st.session_state[f'prompt_template_{idx}'].replace("{", "{{").replace("}", "}}")
                     for key in inputs.keys():
                         prompt_template = prompt_template.replace(f"{{{{{key}}}}}", f"{inputs[key]}")
-
+                
                     try:
                         prompt = prompt_template.replace("{{", "{").replace("}}", "}")
-                        st.markdown(prompt.replace('\n', '  \n'))
+                        prompt_with_line_breaks = prompt.replace("\n", "<br>")
+                        st.markdown(prompt_with_line_breaks.replace('\n', '  \n'), unsafe_allow_html=True)
                     except KeyError as e:
                         st.error(f"缺少必需的輸入: {e}")
-
+                        
                 if shortcut['components'] and st.session_state[f'prompt_template_{idx}'].strip():
                     if len(st.session_state.get('exported_shortcuts', [])) < 4 and shortcut['name'] not in [s['name'] for s in st.session_state.get('exported_shortcuts', [])]:
                         if st.button("輸出到對話頁面", key=f'export_to_chat_{idx}'):
@@ -1213,4 +1217,4 @@ elif selected == "頭像":
 
     settings['user_avatar_chatgpt'] = st.session_state['user_avatar_chatgpt']
     settings['user_avatar_perplexity'] = st.session_state['user_avatar_perplexity']
-    save_settings(settings) 
+    save_settings(settings)
