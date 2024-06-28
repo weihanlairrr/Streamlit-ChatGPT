@@ -296,7 +296,8 @@ async def get_openai_response(client, model, messages, temperature, top_p, prese
             chunk_content = chunk.choices[0].delta.content
             if chunk_content is not None:
                 streamed_text += chunk_content
-                yield streamed_text
+                html_chunk = format_message(streamed_text)
+                yield html_chunk
     except Exception as e:
         error_message = str(e)
         if "Incorrect API key provided" in error_message:
@@ -355,7 +356,8 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
                     if "choices" in json_data and len(json_data["choices"]) > 0:
                         chunk = json_data["choices"][0]["delta"].get("content", "")
                         full_response += chunk
-                        yield full_response
+                        html_chunk = format_message(full_response)
+                        yield html_chunk
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 400:
             error_detail = e.response.json()
@@ -370,6 +372,7 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
         yield f"JSON Decode Error: {str(e)}"
     except Exception as e:
         yield f"Unexpected Error: {str(e)}"
+
 
 def update_slider(key, value):
     st.session_state[key] = value
@@ -488,7 +491,7 @@ def message_func(text, is_user=False, is_df=False):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 10px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                        {text} \n </div>
+                        {format_message(text)} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
                 """,
@@ -514,13 +517,12 @@ def message_func(text, is_user=False, is_df=False):
             st.write(text)
             return
         else:
-
             st.markdown(
                 f"""
                     <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                         <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                         <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                            {text} \n </div>
+                            {format_message(text)} \n </div>
                     </div>
                     """,
                 unsafe_allow_html=True,
@@ -538,26 +540,27 @@ async def handle_prompt_submission(prompt, current_tab_key):
             message_func("Thinking...", is_user=False)
 
         response_container = st.empty()
-        messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
         full_response = ""
+        
+        messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
         
         async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt']):
             if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
                 st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
                 thinking_placeholder.empty()
-            full_response += response_message  # 累積回應
 
-        # 處理 `[object Object]` 問題
-        full_response = full_response.replace("[object Object]", "")
-        full_response = format_message(full_response)  # 格式化回應內容
-        formatted_response = f"```python\n{full_response}\n```"  # 使用三個反引號包裹程式碼
-        response_container.markdown(f"""
-            <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
-                <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                <div class="message-container" style="background: #F1F1F1; color: 2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                    {formatted_response} \n </div>
-            </div>
-        """, unsafe_allow_html=True)
+            full_response = response_message
+            response_container.markdown(
+                f"""
+                <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
+                    <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                        {full_response} \n </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
         st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
         response_container.empty()
         message_func(full_response, is_user=False)
@@ -576,6 +579,7 @@ async def handle_prompt_submission(prompt, current_tab_key):
         full_response = ""
 
         history = st.session_state[current_tab_key]
+        
         for response_message in generate_perplexity_response(
                 prompt,
                 history,
@@ -591,14 +595,12 @@ async def handle_prompt_submission(prompt, current_tab_key):
                 thinking_placeholder.empty()
 
             full_response = response_message
-            full_response = full_response.replace("[object Object]", "")
-            formatted_response = f"```python\n{full_response}\n```"
             response_container.markdown(
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
                     <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                        {formatted_response} \n </div>
+                        {full_response} \n </div>
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -609,6 +611,7 @@ async def handle_prompt_submission(prompt, current_tab_key):
         message_func(full_response, is_user=False)
         chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[current_tab_key]
         save_chat_history(chat_history)
+
 
 def update_exported_shortcuts():
     for exported_shortcut in st.session_state.get('exported_shortcuts', []):
