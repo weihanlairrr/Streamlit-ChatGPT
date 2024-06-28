@@ -417,6 +417,7 @@ def update_max_tokens():
             'max_tokens': st.session_state['max_tokens']
         })
 
+
 def message_func(text, is_user=False, is_df=False):
     model_url = f"data:image/png;base64,{assistant_avatar}"
     user_url = f"data:image/png;base64,{st.session_state['user_avatar']}"
@@ -432,7 +433,7 @@ def message_func(text, is_user=False, is_df=False):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 10px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                        {format_message(text)} \n </div>
+                        {text} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
                 """,
