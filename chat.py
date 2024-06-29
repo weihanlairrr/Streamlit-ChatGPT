@@ -9,6 +9,7 @@ import time
 import markdown2
 import streamlit_shadcn_ui as ui
 import re
+import html
 
 # 保存和載入設置的函數
 def save_settings(settings):
@@ -121,12 +122,13 @@ st.markdown("""
         padding: 10px;
         overflow-x: auto;
         margin: 10px 0;
+        white-space: pre;  /* 保留縮排 */
     }
     .message-container pre code {
         font-family: 'Source Code Pro', 'Courier New', monospace;
         font-size: 15px;
         line-height: 1.4;
-        white-space: pre-wrap;
+        white-space: pre;  /* 保留縮排 */
         color: #f1f1f1;
     }
     .message-container code:not(pre code) {
@@ -153,7 +155,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
 
 
 def get_image_as_base64(image_path):
@@ -432,15 +433,15 @@ def format_message(text):
 
     def code_replacer(match):
         code = match.group(2).strip()
-        return f'<pre><code>{code}</code></pre>'
+        # 不對反三引號包裹的內容進行轉義
+        return f'<pre><code>{html.escape(code)}</code></pre>'
 
-    # 使用正則表達式替換反三引號包裹的內容
+    # 使用正則表達式替換反三引號包裹的程式碼內容
     text = code_pattern.sub(code_replacer, text)
 
-    # 將剩餘的文本轉換為 HTML
+    # 將其餘的文本轉換為 HTML
     html_content = markdown2.markdown(text)
 
-    html_content = html_content.replace("&nbsp;", " ")
     return html_content
 
 
@@ -475,7 +476,6 @@ def update_max_tokens():
             'max_tokens': st.session_state['max_tokens']
         })
 
-
 def message_func(text, is_user=False, is_df=False):
     model_url = f"data:image/png;base64,{assistant_avatar}"
     user_url = f"data:image/png;base64,{st.session_state['user_avatar']}"
@@ -487,7 +487,7 @@ def message_func(text, is_user=False, is_df=False):
         message_bg_color = "linear-gradient(135deg, #00C0FB 0%, #035DE5 100%)"
         avatar_class = "user-avatar"
         avatar_size = "width: 30px; height: 30;"
-        text_with_line_breaks = text.replace("\n", "<br>")
+        text_with_line_breaks = html.escape(text).replace("\n", "<br>")
         st.markdown(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
@@ -529,7 +529,6 @@ def message_func(text, is_user=False, is_df=False):
                     """,
                 unsafe_allow_html=True,
             )
-
 
 async def handle_prompt_submission(prompt, current_tab_key):
     if st.session_state['model_type'] == "ChatGPT":
