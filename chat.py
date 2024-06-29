@@ -392,7 +392,7 @@ def confirm_reset_chat():
     with confirm:
         if st.button("確認", key="confirm_reset"):
             reset_chat()
-            st.rerun()
+            st.experimental_rerun()
     with cancel:
         if st.button("取消", key="cancel_reset", on_click=cancel_reset_chat):
             pass
@@ -1199,7 +1199,6 @@ if selected == "提示詞":
 
                 if st.session_state.get('delete_confirmation') is not None:
                     confirm_delete_shortcut(st.session_state['delete_confirmation'])
-
 
 elif selected == "頭像":
     st.markdown(f"""
