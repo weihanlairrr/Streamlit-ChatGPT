@@ -202,7 +202,7 @@ for key, default_value in [
     ('perplexity_max_tokens', settings.get('perplexity_max_tokens', 1000)),
     ('perplexity_system_prompt', settings.get('perplexity_system_prompt', '')),
     ('gpt_system_prompt', settings.get('gpt_system_prompt', '')),
-    ('language', settings.get('language', '')),
+    ('language', settings.get('language', '繁體中文')),
     ('temperature', settings.get('temperature', 0.5)),
     ('top_p', settings.get('top_p', 0.5)),
     ('presence_penalty', settings.get('presence_penalty', 0.0)),
@@ -278,9 +278,6 @@ async def get_openai_response(client, model, messages, temperature, top_p, prese
         if st.session_state['language']:
             prompt = messages[-1]['content'] + f" 請使用{st.session_state['language']}回答。你的回答不需要提到你會使用{st.session_state['language']}。"
             messages[-1]['content'] = prompt
-        else:
-            prompt = messages[-1]['content'] + " 請使用繁體中文回答。你的回答不需要提到你會使用繁體中文。"
-            messages[-1]['content'] = prompt
 
         response = await client.chat.completions.create(
             model=model,
@@ -322,8 +319,6 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
         # 添加語言設定到 prompt
         if st.session_state['language']:
             prompt = prompt + f" 請使用{st.session_state['language']}回答。你的回答不需要提到你會使用{st.session_state['language']}。"
-        else:
-            prompt = prompt + " 請使用繁體中文回答。你的回答不需要提到你會使用繁體中文。"
 
         # 構建歷史上下文
         context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history])
@@ -872,7 +867,7 @@ if selected == "模型設定":
                                                                  st.session_state.get('open_ai_model', 'gpt-4o')),
                                                              help="4：每百萬tokens = 20美元；3.5-turbo價格為其1/10")
         with col2:
-            st.text_input("指定使用的語言", key='language_input', value=st.session_state.get('language', ''), help="預設使用繁體中文。如要英文，請直接用中文輸入「英文」。", on_change=update_language)
+            st.text_input("指定使用的語言", key='language_input', value=st.session_state.get('language', ''), help="如要使用其他語言，請直接用中文輸入，例如：「英文」。", on_change=update_language)
         with col3:
             st.number_input("Tokens 上限", key='max_tokens_input', min_value=0, value=st.session_state.get('max_tokens', 1000), help="要生成的最大標記數量。", on_change=update_max_tokens)
         st.write("\n")
@@ -924,7 +919,7 @@ if selected == "模型設定":
             selected_model = st.selectbox("選擇 Sonar 或 Llama3 模型", list(perplexity_model_options.keys()), index=list(perplexity_model_options.keys()).index(selected_model_key), help="70b-instruct：每百萬tokens = 2.75美元；8b-instruct：每百萬tokens = 0.25美元")
             st.session_state['perplexity_model'] = perplexity_model_options[selected_model]
         with col2:
-            st.text_input("指定使用的語言", key='language_input', value=st.session_state.get('language', ''), help="預設使用繁體中文。如要英文，請直接用中文輸入「英文」。", on_change=update_language)
+            st.text_input("指定使用的語言", key='language_input', value=st.session_state.get('language', ''), help="如要使用其他語言，請直接用中文輸入，例如：「英文」。", on_change=update_language)
         with col3:
             st.number_input("Tokens 上限", key='max_tokens_input', min_value=0, value=st.session_state.get('max_tokens', 1000), help="要生成的最大標記數量。", on_change=update_max_tokens)
         st.write("\n")
