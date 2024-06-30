@@ -1,3 +1,4 @@
+
 import streamlit as st
 import base64
 from streamlit_option_menu import option_menu
@@ -198,7 +199,6 @@ for key, default_value in [
     ('perplexity_temperature', settings.get('perplexity_temperature', 0.5)),
     ('perplexity_top_p', settings.get('perplexity_top_p', 0.5)),
     ('perplexity_presence_penalty', settings.get('perplexity_presence_penalty', 0.0)),
-    ('perplexity_length_penalty', settings.get('perplexity_length_penalty', 0.0)),
     ('perplexity_max_tokens', settings.get('perplexity_max_tokens', 1000)),
     ('perplexity_system_prompt', settings.get('perplexity_system_prompt', '')),
     ('gpt_system_prompt', settings.get('gpt_system_prompt', '')),
@@ -412,17 +412,28 @@ def reset_chat():
     chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[key]
     save_chat_history(chat_history)
 
-def update_model_params():
-    st.session_state['temperature'] = st.session_state['temperature_slider']
-    st.session_state['top_p'] = st.session_state['top_p_slider']
-    st.session_state['presence_penalty'] = st.session_state['presence_penalty_slider']
-    st.session_state['frequency_penalty'] = st.session_state['frequency_penalty_slider']
-    save_settings({
-        'temperature': st.session_state['temperature'],
-        'top_p': st.session_state['top_p'],
-        'presence_penalty': st.session_state['presence_penalty'],
-        'frequency_penalty': st.session_state['frequency_penalty']
-    })
+def update_model_params(model_type):
+    if model_type == "ChatGPT":
+        st.session_state['temperature'] = st.session_state['temperature_slider']
+        st.session_state['top_p'] = st.session_state['top_p_slider']
+        st.session_state['presence_penalty'] = st.session_state['presence_penalty_slider']
+        st.session_state['frequency_penalty'] = st.session_state['frequency_penalty_slider']
+        save_settings({
+            'temperature': st.session_state['temperature'],
+            'top_p': st.session_state['top_p'],
+            'presence_penalty': st.session_state['presence_penalty'],
+            'frequency_penalty': st.session_state['frequency_penalty']
+        })
+    elif model_type == "Perplexity":
+        st.session_state['perplexity_temperature'] = st.session_state['perplexity_temperature_slider']
+        st.session_state['perplexity_top_p'] = st.session_state['perplexity_top_p_slider']
+        st.session_state['perplexity_presence_penalty'] = st.session_state['perplexity_presence_penalty_slider']
+        save_settings({
+            'perplexity_temperature': st.session_state['perplexity_temperature'],
+            'perplexity_top_p': st.session_state['perplexity_top_p'],
+            'perplexity_presence_penalty': st.session_state['perplexity_presence_penalty']
+        })
+
 
 def format_message(text):
     if isinstance(text, (list, dict)):
@@ -875,24 +886,29 @@ if selected == "模型設定":
                 st.slider("選擇 Temperature",
                           min_value=0.0, max_value=2.0, step=0.1,
                           value=st.session_state['temperature'],
+                          key='temperature_slider',
                           help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。一般建議只更改此參數或 Top P 中的一個，而不要同時更改。",
-                          on_change=update_and_save_setting, args=('temperature',), kwargs={'value': st.session_state['temperature']})
+                          on_change=update_model_params, args=("ChatGPT",))
                 st.slider("選擇 Presence Penalty",
                           min_value=-2.0, max_value=2.0, step=0.1,
                           value=st.session_state['presence_penalty'],
+                          key='presence_penalty_slider',
                           help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
-                          on_change=update_and_save_setting, args=('presence_penalty',), kwargs={'value': st.session_state['presence_penalty']})
+                          on_change=update_model_params, args=("ChatGPT",))
             with col2:
                 st.slider("選擇 Top P",
                           min_value=0.0, max_value=1.0, step=0.1,
                           value=st.session_state['top_p'],
+                          key='top_p_slider',
                           help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
-                          on_change=update_and_save_setting, args=('top_p',), kwargs={'value': st.session_state['top_p']})
+                          on_change=update_model_params, args=("ChatGPT",))
                 st.slider("選擇 Frequency Penalty",
                           min_value=-2.0, max_value=2.0, step=0.1,
                           value=st.session_state['frequency_penalty'],
+                          key='frequency_penalty_slider',
                           help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
-                          on_change=update_and_save_setting, args=('frequency_penalty',), kwargs={'value': st.session_state['frequency_penalty']})
+                          on_change=update_model_params, args=("ChatGPT",))
+
     elif st.session_state['model_type'] == "Perplexity":
         with col1:
             # 定義模型名稱的映射
@@ -919,28 +935,31 @@ if selected == "模型設定":
             with col1:
                 st.slider("選擇 Temperature",
                           min_value=0.0, max_value=2.0, step=0.1,
-                          value=st.session_state['temperature'],
+                          value=st.session_state['perplexity_temperature'],
+                          key='perplexity_temperature_slider',
                           help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。",
-                          on_change=update_and_save_setting, args=('temperature',), kwargs={'value': st.session_state['temperature']})
+                          on_change=update_model_params, args=("Perplexity",))
             with col2:
                 st.slider("選擇 Top P",
                           min_value=0.0, max_value=1.0, step=0.1,
-                          value=st.session_state['top_p'],
+                          value=st.session_state['perplexity_top_p'],
+                          key='perplexity_top_p_slider',
                           help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
-                          on_change=update_and_save_setting, args=('top_p',), kwargs={'value': st.session_state['top_p']})
+                          on_change=update_model_params, args=("Perplexity",))
 
             st.slider("選擇 Presence Penalty",
-                          min_value=-2.0, max_value=2.0, step=0.1,
-                          value=st.session_state['presence_penalty'],
-                          help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
-                          on_change=update_and_save_setting, args=('presence_penalty',), kwargs={'value': st.session_state['presence_penalty']})
+                      min_value=-2.0, max_value=2.0, step=0.1,
+                      value=st.session_state['perplexity_presence_penalty'],
+                      key='perplexity_presence_penalty_slider',
+                      help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
+                      on_change=update_model_params, args=("Perplexity",))
 
     # 保存模型設置
     settings['open_ai_model'] = st.session_state['open_ai_model']
     settings['perplexity_model'] = st.session_state['perplexity_model']
-    settings['perplexity_temperature'] = st.session_state['temperature']
-    settings['perplexity_top_p'] = st.session_state['top_p']
-    settings['perplexity_presence_penalty'] = st.session_state['presence_penalty']
+    settings['perplexity_temperature'] = st.session_state['perplexity_temperature']
+    settings['perplexity_top_p'] = st.session_state['perplexity_top_p']
+    settings['perplexity_presence_penalty'] = st.session_state['perplexity_presence_penalty']
     settings['perplexity_max_tokens'] = st.session_state['max_tokens']
     settings['perplexity_system_prompt'] = st.session_state['perplexity_system_prompt']
     settings['gpt_system_prompt'] = st.session_state['gpt_system_prompt']
