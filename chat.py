@@ -1224,6 +1224,7 @@ elif selected == "頭像":
     """, unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #999;'>目前的頭像</p>", unsafe_allow_html=True)
     st.write("\n")
+    st.write("\n")
     display_avatars()
 
     settings['user_avatar_chatgpt'] = st.session_state['user_avatar_chatgpt']
