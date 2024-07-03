@@ -756,40 +756,30 @@ if selected == "對話":
 
                 asyncio.run(stream_openai_response())
 
-        else:   
-            def translate_to_english(text, target_lang='en'):
-                client = OpenAI(api_key=st.session_state['chatbot_api_key'])
-                response = client.chat.completions.create(
-                    model= st.session_state['open_ai_model'],
-                    messages=[
-                        {"role": "system", "content": f"You are a translator. Translate the following text to {target_lang}. Only provide the translation, no explanations."},
-                        {"role": "user", "content": text}
-                    ]
-                )
-                return response.choices[0].message.content.strip()
-
+        else:
+            # DALL-E 生成圖片邏輯
             def take_input():
+                # 選擇模型
                 model_choice = st.selectbox(
                     "選擇 DALL-E 模型",
                     ("DALL-E 3", "DALL-E 2"),
                     index=None,
                     placeholder="",
                 )
-            
+
+                # 根據選擇的模型進行轉換
                 if model_choice == "DALL-E 3":
                     model_choice = "dall-e-3"
                 else:
                     model_choice = "dall-e-2"
-            
+
+                # 輸入提示詞
                 prompt = st.text_input("輸入提示詞：")
+
                 return model_choice, prompt
-            
+
             def generate_image(client, model_choice, prompt):
                 if st.button("生成圖片"):
-                    # 檢查提示詞是否為英文
-                    if not prompt.replace(' ', '').isascii():
-                        prompt = translate_to_english(prompt)
-            
                     with st.spinner('圖片生成中...'):
                         response = client.images.generate(
                             model=model_choice,
@@ -799,16 +789,18 @@ if selected == "對話":
                             n=1
                         )
                         image_url = response.data[0].url
-            
+                    
                         response = requests.get(image_url)
                         img = Image.open(BytesIO(response.content))
-            
+                    
                         st.image(img)
 
-            if st.session_state['dalle_enabled']:
-                model_choice, prompt = take_input()
-                client = OpenAI(api_key=st.session_state['chatbot_api_key'])
-                generate_image(client=client, model_choice=model_choice, prompt=prompt)
+            # 主程序執行
+            model_choice, prompt = take_input()
+            # 配置客戶端
+            client = OpenAI(api_key=st.session_state['chatbot_api_key'])
+            # 生成圖片並顯示
+            generate_image(client=client, model_choice=model_choice, prompt=prompt)
 
     if st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key']:
         prompt = st.chat_input()
