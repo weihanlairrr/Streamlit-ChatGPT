@@ -6,3 +6,4 @@ openai
 asyncio
 markdown2
 streamlit_shadcn_ui
+Pillow
