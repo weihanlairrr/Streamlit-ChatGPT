@@ -2,7 +2,7 @@ import streamlit as st
 import base64
 from streamlit_option_menu import option_menu
 import requests
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, OpenAI
 import asyncio
 import json
 import time
@@ -10,6 +10,8 @@ import markdown2
 import streamlit_shadcn_ui as ui
 import re
 import html
+from io import BytesIO
+from PIL import Image
 
 # 保存和載入設置的函數
 def save_settings(settings):
@@ -216,7 +218,8 @@ for key, default_value in [
     ('model_type', 'ChatGPT'),
     ('user_avatar_chatgpt', settings.get('user_avatar_chatgpt', user_avatar_default)),
     ('user_avatar_perplexity', settings.get('user_avatar_perplexity', user_avatar_default)),
-    ('prompt_submitted', False)  # 初始化 prompt_submitted 鍵
+    ('prompt_submitted', False),  # 初始化 prompt_submitted 鍵
+    ('dalle_enabled', False),  # DALL-E 模型啟用狀態
 ]:
     if key not in st.session_state:
         st.session_state[key] = default_value
@@ -677,22 +680,25 @@ with st.sidebar:
                 st.session_state[f"messages_ChatGPT_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？" if api_key_input else "請輸入您的 OpenAI API Key"
             st.rerun()
 
-    current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
-    if current_tab_key not in st.session_state:
-        st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
+    if st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']:
+        dalle_toggle = st.checkbox("啟用 DALL-E 模型", key="dalle_enabled")
 
-    if selected == "對話" and 'exported_shortcuts' in st.session_state:
-        api_key_entered = (st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']) or \
-                  (st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key'])
+current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
+if current_tab_key not in st.session_state:
+    st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
 
-        if api_key_entered and 'exported_shortcuts' in st.session_state:
-            with st.expander('你的提示詞'):
-                for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
-                    col = st.columns(1)[0]  # 使用寬度為100%的單列
-                    with col:
-                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "linear-gradient(135deg, #5A5A5A 0%, #2B2B2B 100%)", "color": "#f1f1f1"}):
-                            st.session_state['active_shortcut'] = shortcut
-                        
+if selected == "對話" and 'exported_shortcuts' in st.session_state and not st.session_state['dalle_enabled']:
+    api_key_entered = (st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']) or \
+              (st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key'])
+
+    if api_key_entered and 'exported_shortcuts' in st.session_state:
+        with st.sidebar.expander('你的提示詞'):
+            for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
+                col = st.columns(1)[0]  # 使用寬度為100%的單列
+                with col:
+                    if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "linear-gradient(135deg, #5A5A5A 0%, #2B2B2B 100%)", "color": "#f1f1f1"}):
+                        st.session_state['active_shortcut'] = shortcut
+                    
 
 if selected == "對話":
     if st.session_state['reset_confirmed']:
@@ -703,50 +709,99 @@ if selected == "對話":
         st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
 
     # 顯示對話
-    for msg in st.session_state[current_tab_key]:
-        message_func(msg["content"], is_user=(msg["role"] == "user"))
+    if not st.session_state['dalle_enabled']:
+        for msg in st.session_state[current_tab_key]:
+            message_func(msg["content"], is_user=(msg["role"] == "user"))
 
     if st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']:
-        prompt = st.chat_input()
-        if prompt:
-            st.session_state['chat_started'] = True
-            client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
-            st.session_state[current_tab_key].append({"role": "user", "content": prompt})
-            message_func(prompt, is_user=True)
+        if not st.session_state['dalle_enabled']:
+            prompt = st.chat_input()
+            if prompt:
+                st.session_state['chat_started'] = True
+                client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
+                st.session_state[current_tab_key].append({"role": "user", "content": prompt})
+                message_func(prompt, is_user=True)
 
-            # 顯示 "Thinking..." 訊息
-            thinking_placeholder = st.empty()
-            st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
-            with thinking_placeholder.container():
-                message_func("Thinking...", is_user=False)
+                # 顯示 "Thinking..." 訊息
+                thinking_placeholder = st.empty()
+                st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
+                with thinking_placeholder.container():
+                    message_func("Thinking...", is_user=False)
 
-            response_container = st.empty()
-            messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
-            full_response = ""
+                response_container = st.empty()
+                messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
+                full_response = ""
 
-            async def stream_openai_response():
-                async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt']):
-                    # 清除 "Thinking..." 訊息並開始流式回覆
-                    if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
-                        st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
-                        thinking_placeholder.empty()
+                async def stream_openai_response():
+                    async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt']):
+                        # 清除 "Thinking..." 訊息並開始流式回覆
+                        if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
+                            st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
+                            thinking_placeholder.empty()
 
-                    full_response = response_message
-                    response_container.markdown(f"""
-                        <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
-                            <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                            <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                                {format_message(full_response)} \n </div>
-                        </div>
-                    """, unsafe_allow_html=True)
+                        full_response = response_message
+                        response_container.markdown(f"""
+                            <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
+                                <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                                <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
+                                    {format_message(full_response)} \n </div>
+                            </div>
+                        """, unsafe_allow_html=True)
 
-                st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
-                response_container.empty()
-                message_func(full_response, is_user=False)
-                chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[current_tab_key]
-                save_chat_history(chat_history)
+                    st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
+                    response_container.empty()
+                    message_func(full_response, is_user=False)
+                    chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[current_tab_key]
+                    save_chat_history(chat_history)
 
-            asyncio.run(stream_openai_response())
+                asyncio.run(stream_openai_response())
+
+        else:
+            # DALL-E 生成圖片邏輯
+            def take_input():
+                # 選擇模型
+                model_choice = st.selectbox(
+                    "選擇 DALL-E 模型",
+                    ("DALL-E 3", "DALL-E 2"),
+                    index=None,
+                    placeholder="",
+                )
+
+                # 根據選擇的模型進行轉換
+                if model_choice == "DALL-E 3":
+                    model_choice = "dall-e-3"
+                else:
+                    model_choice = "dall-e-2"
+
+                # 輸入提示詞
+                prompt = st.text_input("輸入提示詞：")
+
+                return model_choice, prompt
+
+            def generate_image(client, model_choice, prompt):
+                if st.button("生成圖片"):
+                    # 創建圖片生成請求
+                    response = client.images.generate(
+                        model=model_choice,
+                        prompt=prompt,
+                        size="1024x1024",
+                        quality="standard",
+                        n=1
+                    )
+                    image_url = response.data[0].url
+
+                    response = requests.get(image_url)
+                    img = Image.open(BytesIO(response.content))
+
+                    # 顯示圖片
+                    st.image(img)
+
+            # 主程序執行
+            model_choice, prompt = take_input()
+            # 配置客戶端
+            client = OpenAI(api_key=st.session_state['chatbot_api_key'])
+            # 生成圖片並顯示
+            generate_image(client=client, model_choice=model_choice, prompt=prompt)
 
     if st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key']:
         prompt = st.chat_input()
@@ -806,10 +861,11 @@ if selected == "對話":
     with st.sidebar:
         sidebar_placeholder = st.empty()
         sidebar_placeholder.empty()
-        st.sidebar.divider()
-        st.button("重置對話", on_click=lambda: st.session_state.update({'reset_confirmation': True}), use_container_width=True)
-        if st.session_state.get('reset_confirmation', False):
-            confirm_reset_chat()
+        if not st.session_state['dalle_enabled']:
+            st.sidebar.divider()
+            st.button("重置對話", on_click=lambda: st.session_state.update({'reset_confirmation': True}), use_container_width=True)
+            if st.session_state.get('reset_confirmation', False):
+                confirm_reset_chat()
 
     # 當使用者點擊送出按鈕後的邏輯處理
     if 'active_shortcut' in st.session_state and st.session_state.get('active_shortcut') is not None:
@@ -856,6 +912,7 @@ if selected == "對話":
     # 在頁面載入時重置 prompt_submitted 標記
     if 'prompt_submitted' in st.session_state:
         del st.session_state['prompt_submitted']
+
 
 if selected == "模型設定":
     col1, col2, col3 = st.columns([2, 2, 1.5])
@@ -965,7 +1022,7 @@ if selected == "模型設定":
     settings['max_tokens'] = st.session_state['max_tokens']
     save_settings(settings)
 
-if selected == "提示詞":
+if selected == "提示詞" and not st.session_state['dalle_enabled']:
     # 初始化 session state 變量
     if 'shortcuts' not in st.session_state:
         st.session_state['shortcuts'] = load_shortcuts()
