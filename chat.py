@@ -758,6 +758,11 @@ if selected == "對話":
                 asyncio.run(stream_openai_response())
 
         else:
+            # 輸入提示詞
+            prompt = st.text_input("輸入提示詞")
+        
+            # 輸入不希望出現的內容
+            negative_prompt = st.text_input("輸入不希望出現的內容（選填）")
             # DALL-E 生成圖片邏輯
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -853,12 +858,6 @@ if selected == "對話":
         
             # 細節程度調整
             detail_level = st.slider("細節程度", 1, 10, 5)
-        
-            # 輸入提示詞
-            prompt = st.text_input("輸入提示詞")
-        
-            # 輸入不希望出現的內容
-            negative_prompt = st.text_input("輸入不希望出現的內容（選填）")
         
             # 生成圖片按鈕
             if st.button("生成圖片"):
