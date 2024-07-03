@@ -680,8 +680,9 @@ with st.sidebar:
                 st.session_state[f"messages_ChatGPT_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？" if api_key_input else "請輸入您的 OpenAI API Key"
             st.rerun()
 
+if selected == "對話":
     if st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']:
-        dalle_toggle = st.checkbox("啟用 DALL-E 模型", key="dalle_enabled")
+        dalle_toggle = st.sidebar.checkbox("啟用 DALL-E 模型", key="dalle_enabled")
 
 current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
 if current_tab_key not in st.session_state:
