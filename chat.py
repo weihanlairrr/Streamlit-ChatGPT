@@ -784,7 +784,8 @@ if selected == "對話":
                     "冷色調": "cool color scheme",
                     "黑白": "black and white",
                     "柔和色調": "soft color palette",
-                    "鮮豔色調": "vibrant color palette"
+                    "鮮豔色調": "vibrant color palette",
+                    "低飽和色調": "low saturation color scheme"
                 }
                 selected_color_preference_zh = st.selectbox("色彩偏好", list(color_preference_options.keys()))
                 selected_color_preference_en = color_preference_options[selected_color_preference_zh]
