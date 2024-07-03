@@ -863,7 +863,11 @@ if selected == "對話":
             # 生成圖片按鈕
             if st.button("生成圖片"):
                 if not prompt.strip():
-                    st.markdown("<div class='custom-warning'>請輸入提示詞</div>", unsafe_allow_html=True)
+                    warning_placeholder = st.empty()
+                    warning_placeholder.markdown("<div class='custom-warning'>請輸入提示詞</div>", unsafe_allow_html=True)
+                    time.sleep(2)
+
+                    warning_placeholder.empty()
                 else:
                     with st.spinner('圖片生成中...'):
                         # 整合 prompt
