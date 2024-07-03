@@ -758,49 +758,141 @@ if selected == "對話":
 
         else:
             # DALL-E 生成圖片邏輯
-            def take_input():
+            col1, col2, col3 = st.columns(3)
+            with col1:
                 # 選擇模型
                 model_choice = st.selectbox(
                     "選擇 DALL-E 模型",
                     ("DALL-E 3", "DALL-E 2"),
-                    index=None,
+                    index=0,
                     placeholder="",
                 )
-
+        
                 # 根據選擇的模型進行轉換
-                if model_choice == "DALL-E 3":
-                    model_choice = "dall-e-3"
+                model_choice = "dall-e-3" if model_choice == "DALL-E 3" else "dall-e-2"
+        
+                # 色彩偏好設定
+                color_preference_options = {
+                    "無特定偏好": "no specific color preference",
+                    "暖色調": "warm color scheme",
+                    "冷色調": "cool color scheme",
+                    "黑白": "black and white",
+                    "柔和色調": "soft color palette",
+                    "鮮豔色調": "vibrant color palette"
+                }
+                selected_color_preference_zh = st.selectbox("色彩偏好", list(color_preference_options.keys()))
+                selected_color_preference_en = color_preference_options[selected_color_preference_zh]
+        
+            with col2:
+                # 圖片尺寸選擇
+                size_options = {
+                    "1024x1024": "1024x1024",
+                    "1792x1024": "1792x1024",
+                    "1024x1792": "1024x1792"
+                }
+                selected_size = st.selectbox("圖片尺寸", list(size_options.keys()))
+        
+                # 圖片效果選擇
+                effect_options = {
+                    "無特定偏好": "no specific effect preference",
+                    "顆粒質感": "grainy texture",
+                    "玻璃質感": "glass-like effect",
+                    "紙質感": "paper texture",
+                    "金屬質感": "metallic sheen",
+                    "馬賽克效果": "mosaic pattern",
+                    "浮雕效果": "embossed effect",
+                    "陶瓷質感": "ceramic texture",
+                    "黏土質感": "clay texture", 
+                    "木頭質感": "wood texture",
+                    "磚塊質感": "brick texture"
+                }
+                selected_effect = st.selectbox("圖片效果", list(effect_options.keys()))
+                selected_effect_en = effect_options[selected_effect]
+        
+            with col3:
+                # 圖片風格選擇
+                style_options = {
+                    "無特定偏好": "no specific style preference",
+                    "寫實風格": "realistic style",
+                    "卡通風格": "cartoon style",
+                    "水彩畫風格": "watercolor style",
+                    "油畫風格": "oil painting style",
+                    "素描風格": "sketch style",
+                    "像素藝術": "pixel art",
+                    "復古風格": "vintage style",
+                    "超現實主義": "surrealism",
+                    "極簡主義": "minimalism",
+                    "印象派": "impressionism",
+                    "抽象藝術": "abstract art",
+                    "3D渲染": "3D render",
+                    "普普藝術": "pop art",
+                    "哥德風格": "gothic style",
+                    "日式動漫": "anime style",
+                    "中國水墨畫": "Chinese ink painting",
+                    "拼貼藝術": "collage art",
+                    "立體主義": "cubism",
+                    "電影海報": "movie poster",
+                    "科幻插畫": "sci-fi illustration",
+                }
+                selected_style_zh = st.selectbox("圖片風格", list(style_options.keys()))
+                selected_style_en = style_options[selected_style_zh]
+        
+                # 光線設定選擇
+                light_options = {
+                    "無特定偏好": "no specific lighting preference",
+                    "攝影棚燈光": "studio lighting",
+                    "自然光線": "natural lighting",
+                    "舞台燈光": "stage lighting",
+                    "背光效果": "backlit effect",
+                    "螢光效果": "neon lighting",
+                    "燭光氛圍": "candlelight ambiance"
+                }
+                selected_light_zh = st.selectbox("光線設定", list(light_options.keys()))
+                selected_light_en = light_options[selected_light_zh]
+        
+            # 細節程度調整
+            detail_level = st.slider("細節程度", 1, 10, 5)
+        
+            # 輸入提示詞
+            prompt = st.text_input("輸入提示詞")
+        
+            # 輸入不希望出現的內容
+            negative_prompt = st.text_input("輸入不希望出現的內容（選填）")
+        
+            # 生成圖片按鈕
+            if st.button("生成圖片"):
+                if not prompt.strip():
+                    st.markdown("<div class='custom-warning'>請輸入提示詞</div>", unsafe_allow_html=True)
                 else:
-                    model_choice = "dall-e-2"
-
-                # 輸入提示詞
-                prompt = st.text_input("輸入提示詞：")
-
-                return model_choice, prompt
-
-            def generate_image(client, model_choice, prompt):
-                if st.button("生成圖片"):
                     with st.spinner('圖片生成中...'):
-                        response = client.images.generate(
-                            model=model_choice,
-                            prompt=prompt,
-                            size="1024x1024",
-                            quality="standard",
-                            n=1
-                        )
-                        image_url = response.data[0].url
-                    
-                        response = requests.get(image_url)
-                        img = Image.open(BytesIO(response.content))
-                    
-                        st.image(img)
+                        # 整合 prompt
+                        if selected_effect != "無特定效果":
+                            full_prompt = f"{prompt}, with {selected_effect_en}, {selected_style_en} style, {selected_color_preference_en}, {selected_light_en}, with detail level {detail_level} out of 10"
+                        else:
+                            full_prompt = f"{prompt}, {selected_style_en} style, {selected_color_preference_en}, {selected_light_en}, with detail level {detail_level} out of 10"
+        
+                        if negative_prompt:
+                            full_prompt += f". Avoid including: {negative_prompt}"
+        
+                        # 配置客戶端
+                        client = OpenAI(api_key=st.session_state['chatbot_api_key'])
+        
+                        try:
+                            response = client.images.generate(
+                                model=model_choice,
+                                prompt=full_prompt,
+                                size=selected_size,
+                                n=1
+                            )
+                            image_url = response.data[0].url
+                        
+                            response = requests.get(image_url)
+                            img = Image.open(BytesIO(response.content))
+                        
+                            st.image(img)
+                        except Exception as e:
+                            st.error(f"圖片生成失敗：{str(e)}")
 
-            # 主程序執行
-            model_choice, prompt = take_input()
-            # 配置客戶端
-            client = OpenAI(api_key=st.session_state['chatbot_api_key'])
-            # 生成圖片並顯示
-            generate_image(client=client, model_choice=model_choice, prompt=prompt)
 
     if st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key']:
         prompt = st.chat_input()
