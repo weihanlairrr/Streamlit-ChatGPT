@@ -195,7 +195,7 @@ for key, default_value in [
     ('chatbot_api_key', settings.get('chatbot_api_key', '')),
     ('replicate_api_key', settings.get('replicate_api_key', '')),
     ('perplexity_api_key', settings.get('perplexity_api_key', '')),
-    ('open_ai_model', settings.get('open_ai_model', 'gpt-4o')),
+    ('open_ai_model', settings.get('open_ai_model', 'gpt 4o')),
     ('perplexity_model', settings.get('perplexity_model', 'llama-3-sonar-large-32k-online')),
     ('perplexity_temperature', settings.get('perplexity_temperature', 0.5)),
     ('perplexity_top_p', settings.get('perplexity_top_p', 0.5)),
@@ -1018,7 +1018,7 @@ if selected == "模型設定":
     if st.session_state['model_type'] == "ChatGPT":
         with col1:
             st.session_state['open_ai_model'] = st.selectbox("選擇 ChatGPT 模型", ["gpt 3.5 turbo", "gpt 4o"],
-                                                             index=["gpt-3.5-turbo", "gpt-4o"].index(
+                                                             index=["gpt 3.5 turbo", "gpt 4o"].index(
                                                                  st.session_state.get('open_ai_model', 'gpt-4o')),
                                                              help="4：每百萬tokens = 20美元；3.5-turbo價格為其1/10")
         with col2:
