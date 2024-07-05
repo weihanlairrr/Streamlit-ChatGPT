@@ -437,10 +437,10 @@ def format_message(text):
         return f"<pre><code>{json.dumps(text, indent=2)}</code></pre>"
 
     # 定義正則表達式來匹配反三引號
-    code_pattern = re.compile(r'(```)(.*?)(```|$)', re.DOTALL)
+    code_pattern = re.compile(r'```(.*?)```', re.DOTALL)
 
     def code_replacer(match):
-        code = match.group(2).strip()
+        code = match.group(1).strip()
         # 不對反三引號包裹的內容進行轉義
         return f'<pre><code>{html.escape(code)}</code></pre>'
 
@@ -449,8 +449,12 @@ def format_message(text):
 
     # 將其餘的文本轉換為 HTML
     html_content = markdown2.markdown(text)
+    # 轉換 p 標籤以避免嵌套問題
+    html_content = html_content.replace('<p>', '').replace('</p>', '')
 
     return html_content
+
+
 
 
 def update_and_save_setting(key, value):
