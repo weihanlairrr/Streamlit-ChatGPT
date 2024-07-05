@@ -450,6 +450,9 @@ def format_message(text):
     # 將其餘的文本轉換為 HTML
     html_content = markdown2.markdown(text)
 
+    # 處理潛在的HTML標籤錯誤
+    html_content = re.sub(r'(<[^>]*)(?<!>)<', r'\1', html_content)
+
     return html_content
 
 
