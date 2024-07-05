@@ -497,7 +497,7 @@ def message_func(text, is_user=False, is_df=False):
         message_alignment = "flex-end"
         message_bg_color = "linear-gradient(135deg, #00C0FB 0%, #035DE5 100%)"
         avatar_class = "user-avatar"
-        avatar_size = "width: 30px; height: 30;"
+        avatar_size = "width: 35px; height: 35;"
         text_with_line_breaks = html.escape(text).replace("\n", "<br>")
         st.markdown(
             f"""
