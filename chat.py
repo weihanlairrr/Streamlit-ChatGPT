@@ -1017,7 +1017,7 @@ if selected == "模型設定":
     col1, col2, col3 = st.columns([2, 2, 1.5])
     if st.session_state['model_type'] == "ChatGPT":
         with col1:
-            st.session_state['open_ai_model'] = st.selectbox("選擇 ChatGPT 模型", ["gpt-3.5-turbo", "gpt-4o"],
+            st.session_state['open_ai_model'] = st.selectbox("選擇 ChatGPT 模型", ["gpt 3.5 turbo", "gpt 4o"],
                                                              index=["gpt-3.5-turbo", "gpt-4o"].index(
                                                                  st.session_state.get('open_ai_model', 'gpt-4o')),
                                                              help="4：每百萬tokens = 20美元；3.5-turbo價格為其1/10")
@@ -1063,10 +1063,11 @@ if selected == "模型設定":
         with col1:
             # 定義模型名稱的映射
             perplexity_model_options = {
-                "sonar-large-32k-online": "llama-3-sonar-large-32k-online",
-                "sonar-large-32k-chat": "llama-3-sonar-large-32k-chat",
-                "llama-3-70b-instruct": "llama-3-70b-instruct",
-                "llama-3-8b-instruct": "llama-3-8b-instruct"
+                "sonar large 32k online": "llama-3-sonar-large-32k-online",
+                "sonar large 32k chat": "llama-3-sonar-large-32k-chat",
+                "llama 3 70b instruct": "llama-3-70b-instruct",
+                "llama 3 8b instruct": "llama-3-8b-instruct",
+                "mixtral 8x7b instruct":"mixtral-8x7b-instruct"
             }
             # 顯示簡化後的模型名稱
             reverse_mapping = {v: k for k, v in perplexity_model_options.items()}
