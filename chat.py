@@ -193,7 +193,6 @@ avatars = {
 # 初始化狀態變量
 for key, default_value in [
     ('chatbot_api_key', settings.get('chatbot_api_key', '')),
-    ('replicate_api_key', settings.get('replicate_api_key', '')),
     ('perplexity_api_key', settings.get('perplexity_api_key', '')),
     ('open_ai_model', settings.get('open_ai_model', 'gpt-4o')),
     ('perplexity_model', settings.get('perplexity_model', 'llama-3-sonar-large-32k-online')),
@@ -219,7 +218,6 @@ for key, default_value in [
     ('user_avatar_chatgpt', settings.get('user_avatar_chatgpt', user_avatar_default)),
     ('user_avatar_perplexity', settings.get('user_avatar_perplexity', user_avatar_default)),
     ('prompt_submitted', False),  # 初始化 prompt_submitted 鍵
-    ('dalle_enabled', False),  # DALL-E 模型啟用狀態
 ]:
     if key not in st.session_state:
         st.session_state[key] = default_value
@@ -497,7 +495,7 @@ def message_func(text, is_user=False, is_df=False):
         message_alignment = "flex-end"
         message_bg_color = "linear-gradient(135deg, #00C0FB 0%, #035DE5 100%)"
         avatar_class = "user-avatar"
-        avatar_size = "width: 32px"
+        avatar_size = "width: 32px; height: 40px;"
         text_with_line_breaks = html.escape(text).replace("\n", "<br>")
         st.markdown(
             f"""
@@ -683,19 +681,15 @@ with st.sidebar:
                 st.session_state[f"messages_ChatGPT_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？" if api_key_input else "請輸入您的 OpenAI API Key"
             st.rerun()
 
-if selected == "對話":
-    if st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']:
-        dalle_toggle = st.sidebar.checkbox("啟用 DALL-E 模型", key="dalle_enabled")
-
 current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
 if current_tab_key not in st.session_state:
     st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
 
-if selected == "對話" and 'exported_shortcuts' in st.session_state and not st.session_state['dalle_enabled']:
+if selected == "對話" and 'exported_shortcuts' in st.session_state:
     api_key_entered = (st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']) or \
               (st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key'])
 
-    if api_key_entered and 'exported_shortcuts' in st.session_state:
+    if api_key_entered and 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
         with st.sidebar.expander('你的提示詞'):
             for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
                 col = st.columns(1)[0]  # 使用寬度為100%的單列
@@ -713,12 +707,12 @@ if selected == "對話":
         st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
 
     # 顯示對話
-    if not st.session_state['dalle_enabled']:
+    if not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
         for msg in st.session_state[current_tab_key]:
             message_func(msg["content"], is_user=(msg["role"] == "user"))
 
     if st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']:
-        if not st.session_state['dalle_enabled']:
+        if not st.session_state['open_ai_model'] == "DALL-E":
             prompt = st.chat_input()
             if prompt:
                 st.session_state['chat_started'] = True
@@ -960,7 +954,7 @@ if selected == "對話":
     with st.sidebar:
         sidebar_placeholder = st.empty()
         sidebar_placeholder.empty()
-        if not st.session_state['dalle_enabled']:
+        if st.session_state['model_type'] != "ChatGPT" or st.session_state['open_ai_model'] != "DALL-E":
             st.sidebar.divider()
             st.button("重置對話", on_click=lambda: st.session_state.update({'reset_confirmation': True}), use_container_width=True)
             if st.session_state.get('reset_confirmation', False):
@@ -1014,14 +1008,24 @@ if selected == "對話":
 
 
 def update_open_ai_model():
-    st.session_state['open_ai_model'] = st.session_state['open_ai_model_selection']
-    settings['open_ai_model'] = st.session_state['open_ai_model']
+    model_display_names = {"GPT-4o": "gpt-4o", "GPT-3.5-Turbo": "gpt-3.5-turbo", "DALL-E": "DALL-E"}
+    selected_model = model_display_names[st.session_state['open_ai_model_selection']]
+    st.session_state['open_ai_model'] = selected_model
+    settings['open_ai_model'] = selected_model
     save_settings(settings)
     st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
 
 def update_perplexity_model():
-    st.session_state['perplexity_model'] = st.session_state['perplexity_model_selection']
-    settings['perplexity_model'] = st.session_state['perplexity_model']
+    perplexity_model_display_names = {
+        "Sonar-Large-32k-Online": "llama-3-sonar-large-32k-online",
+        "Sonar-Large-32k-Chat": "llama-3-sonar-large-32k-chat",
+        "Llama-3-70b-Instruct": "llama-3-70b-instruct",
+        "Llama-3-8b-Instruct": "llama-3-8b-instruct",
+        "Mixtral-8x7b-Instruct": "mixtral-8x7b-instruct"
+    }
+    selected_model = perplexity_model_display_names[st.session_state['perplexity_model_selection']]
+    st.session_state['perplexity_model'] = selected_model
+    settings['perplexity_model'] = selected_model
     save_settings(settings)
     st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
 
@@ -1029,10 +1033,13 @@ if selected == "模型設定":
     col1, col2, col3 = st.columns([2, 2, 1.5])
     if st.session_state['model_type'] == "ChatGPT":
         with col1:
+            model_display_names = {"GPT-4o": "gpt-4o", "GPT-3.5-Turbo": "gpt-3.5-turbo", "DALL-E": "DALL-E"}
+            reverse_mapping = {v: k for k, v in model_display_names.items()}
+            selected_model_key = reverse_mapping.get(st.session_state['open_ai_model'], "GPT-4o")
             st.selectbox(
                 "選擇 ChatGPT 模型",
-                ["gpt-3.5-turbo", "gpt-4o"],
-                index=["gpt-3.5-turbo", "gpt-4o"].index(st.session_state.get('open_ai_model', 'gpt-4o')),
+                list(model_display_names.keys()),
+                index=list(model_display_names.keys()).index(selected_model_key),
                 key='open_ai_model_selection',
                 on_change=update_open_ai_model
             )
@@ -1115,21 +1122,19 @@ if selected == "模型設定":
 
     elif st.session_state['model_type'] == "Perplexity":
         with col1:
-            # 定義模型名稱的映射
-            perplexity_model_options = {
-                "sonar-large-32k-online": "llama-3-sonar-large-32k-online",
-                "sonar-large-32k-chat": "llama-3-sonar-large-32k-chat",
-                "llama-3-70b-instruct": "llama-3-70b-instruct",
-                "llama-3-8b-instruct": "llama-3-8b-instruct",
-                "mixtral-8x7b-instruct": "mixtral-8x7b-instruct"
+            perplexity_model_display_names = {
+                "Sonar-Large-32k-Online": "llama-3-sonar-large-32k-online",
+                "Sonar-Large-32k-Chat": "llama-3-sonar-large-32k-chat",
+                "Llama-3-70b-Instruct": "llama-3-70b-instruct",
+                "Llama-3-8b-Instruct": "llama-3-8b-instruct",
+                "Mixtral-8x7b-Instruct": "mixtral-8x7b-instruct"
             }
-            # 顯示簡化後的模型名稱
-            reverse_mapping = {v: k for k, v in perplexity_model_options.items()}
-            selected_model_key = reverse_mapping.get(st.session_state['perplexity_model'], "sonar-large-32k-online")
+            reverse_mapping = {v: k for k, v in perplexity_model_display_names.items()}
+            selected_model_key = reverse_mapping.get(st.session_state['perplexity_model'], "Sonar Large 32k Online")
             st.selectbox(
                 "選擇 Sonar 或 Llama3 模型",
-                list(perplexity_model_options.keys()),
-                index=list(perplexity_model_options.keys()).index(selected_model_key),
+                list(perplexity_model_display_names.keys()),
+                index=list(perplexity_model_display_names.keys()).index(selected_model_key),
                 key='perplexity_model_selection',
                 on_change=update_perplexity_model
             )
@@ -1218,7 +1223,7 @@ if selected == "模型設定":
     save_settings(settings)
 
 
-if selected == "提示詞" and not st.session_state['dalle_enabled']:
+if selected == "提示詞" and not st.session_state['open_ai_model'] == "DALL-E":
     # 初始化 session state 變量
     if 'shortcuts' not in st.session_state:
         st.session_state['shortcuts'] = load_shortcuts()
