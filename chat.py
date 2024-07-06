@@ -1013,51 +1013,105 @@ if selected == "對話":
         del st.session_state['prompt_submitted']
 
 
+def update_open_ai_model():
+    st.session_state['open_ai_model'] = st.session_state['open_ai_model_selection']
+    settings['open_ai_model'] = st.session_state['open_ai_model']
+    save_settings(settings)
+    st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
+
+def update_perplexity_model():
+    st.session_state['perplexity_model'] = st.session_state['perplexity_model_selection']
+    settings['perplexity_model'] = st.session_state['perplexity_model']
+    save_settings(settings)
+    st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
+
 if selected == "模型設定":
     col1, col2, col3 = st.columns([2, 2, 1.5])
     if st.session_state['model_type'] == "ChatGPT":
         with col1:
-            st.session_state['open_ai_model'] = st.selectbox("選擇 ChatGPT 模型", ["gpt-3.5-turbo", "gpt-4o"],
-                                                             index=["gpt-3.5-turbo", "gpt-4o"].index(
-                                                                 st.session_state.get('open_ai_model', 'gpt-4o')),
-                                                             help="4：每百萬tokens = 20美元；3.5-turbo價格為其1/10")
+            st.selectbox(
+                "選擇 ChatGPT 模型",
+                ["gpt-3.5-turbo", "gpt-4o"],
+                index=["gpt-3.5-turbo", "gpt-4o"].index(st.session_state.get('open_ai_model', 'gpt-4o')),
+                key='open_ai_model_selection',
+                on_change=update_open_ai_model
+            )
         with col2:
-            st.text_input("指定使用的語言", key='language_input', value=st.session_state.get('language', ''), help="如要使用其他語言，請直接用中文輸入，例如：「英文」。", on_change=update_language)
+            st.text_input(
+                "指定使用的語言",
+                key='language_input',
+                value=st.session_state.get('language', ''),
+                help="如要使用其他語言，請直接用中文輸入，例如：「英文」。",
+                on_change=update_language
+            )
         with col3:
-            st.number_input("Tokens 上限", key='max_tokens_input', min_value=0, value=st.session_state.get('max_tokens', 1000), help="要生成的最大標記數量。", on_change=update_max_tokens)
+            st.number_input(
+                "Tokens 上限",
+                key='max_tokens_input',
+                min_value=0,
+                value=st.session_state.get('max_tokens', 1000),
+                help="要生成的最大標記數量。",
+                on_change=update_max_tokens
+            )
         st.write("\n")
-        st.text_area("角色設定", value=st.session_state.get('gpt_system_prompt', ''),
-                     placeholder="你是一個友好且資深的英文老師。你的目標是幫助使用者提高他們的語言能力，並且用簡單易懂的方式解釋概念。你應該耐心回答問題，並鼓勵學生提出更多問題。",
-                     help="用於給模型提供初始指導。", key="gpt_system_prompt_input", on_change=update_gpt_system_prompt, height=300)
+        st.text_area(
+            "角色設定",
+            value=st.session_state.get('gpt_system_prompt', ''),
+            placeholder="你是一個友好且資深的英文老師。你的目標是幫助使用者提高他們的語言能力，並且用簡單易懂的方式解釋概念。你應該耐心回答問題，並鼓勵學生提出更多問題。",
+            help="用於給模型提供初始指導。",
+            key="gpt_system_prompt_input",
+            on_change=update_gpt_system_prompt,
+            height=300
+        )
         st.write("\n")
         with st.expander("模型參數", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
-                st.slider("選擇 Temperature",
-                          min_value=0.0, max_value=2.0, step=0.1,
-                          value=st.session_state['temperature'],
-                          key='temperature_slider',
-                          help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。一般建議只更改此參數或 Top P 中的一個，而不要同時更改。",
-                          on_change=update_model_params, args=("ChatGPT",))
-                st.slider("選擇 Presence Penalty",
-                          min_value=-2.0, max_value=2.0, step=0.1,
-                          value=st.session_state['presence_penalty'],
-                          key='presence_penalty_slider',
-                          help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
-                          on_change=update_model_params, args=("ChatGPT",))
+                st.slider(
+                    "選擇 Temperature",
+                    min_value=0.0,
+                    max_value=2.0,
+                    step=0.1,
+                    value=st.session_state['temperature'],
+                    key='temperature_slider',
+                    help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。一般建議只更改此參數或 Top P 中的一個，而不要同時更改。",
+                    on_change=update_model_params,
+                    args=("ChatGPT",)
+                )
+                st.slider(
+                    "選擇 Presence Penalty",
+                    min_value=-2.0,
+                    max_value=2.0,
+                    step=0.1,
+                    value=st.session_state['presence_penalty'],
+                    key='presence_penalty_slider',
+                    help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
+                    on_change=update_model_params,
+                    args=("ChatGPT",)
+                )
             with col2:
-                st.slider("選擇 Top P",
-                          min_value=0.0, max_value=1.0, step=0.1,
-                          value=st.session_state['top_p'],
-                          key='top_p_slider',
-                          help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
-                          on_change=update_model_params, args=("ChatGPT",))
-                st.slider("選擇 Frequency Penalty",
-                          min_value=-2.0, max_value=2.0, step=0.1,
-                          value=st.session_state['frequency_penalty'],
-                          key='frequency_penalty_slider',
-                          help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
-                          on_change=update_model_params, args=("ChatGPT",))
+                st.slider(
+                    "選擇 Top P",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.1,
+                    value=st.session_state['top_p'],
+                    key='top_p_slider',
+                    help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
+                    on_change=update_model_params,
+                    args=("ChatGPT",)
+                )
+                st.slider(
+                    "選擇 Frequency Penalty",
+                    min_value=-2.0,
+                    max_value=2.0,
+                    step=0.1,
+                    value=st.session_state['frequency_penalty'],
+                    key='frequency_penalty_slider',
+                    help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
+                    on_change=update_model_params,
+                    args=("ChatGPT",)
+                )
 
     elif st.session_state['model_type'] == "Perplexity":
         with col1:
@@ -1067,43 +1121,84 @@ if selected == "模型設定":
                 "sonar-large-32k-chat": "llama-3-sonar-large-32k-chat",
                 "llama-3-70b-instruct": "llama-3-70b-instruct",
                 "llama-3-8b-instruct": "llama-3-8b-instruct",
-                "mixtral-8x7b-instruct":"mixtral-8x7b-instruct"
+                "mixtral-8x7b-instruct": "mixtral-8x7b-instruct"
             }
             # 顯示簡化後的模型名稱
             reverse_mapping = {v: k for k, v in perplexity_model_options.items()}
             selected_model_key = reverse_mapping.get(st.session_state['perplexity_model'], "sonar-large-32k-online")
-            selected_model = st.selectbox("選擇 Sonar 或 Llama3 模型", list(perplexity_model_options.keys()), index=list(perplexity_model_options.keys()).index(selected_model_key), help="70b-instruct：每百萬tokens = 2.75美元；8b-instruct：每百萬tokens = 0.25美元")
-            st.session_state['perplexity_model'] = perplexity_model_options[selected_model]
+            st.selectbox(
+                "選擇 Sonar 或 Llama3 模型",
+                list(perplexity_model_options.keys()),
+                index=list(perplexity_model_options.keys()).index(selected_model_key),
+                key='perplexity_model_selection',
+                on_change=update_perplexity_model
+            )
         with col2:
-            st.text_input("指定使用的語言", key='language_input', value=st.session_state.get('language', ''), help="如要使用其他語言，請直接用中文輸入，例如：「英文」。", on_change=update_language)
+            st.text_input(
+                "指定使用的語言",
+                key='language_input',
+                value=st.session_state.get('language', ''),
+                help="如要使用其他語言，請直接用中文輸入，例如：「英文」。",
+                on_change=update_language
+            )
         with col3:
-            st.number_input("Tokens 上限", key='max_tokens_input', min_value=0, value=st.session_state.get('max_tokens', 1000), help="要生成的最大標記數量。", on_change=update_max_tokens)
+            st.number_input(
+                "Tokens 上限",
+                key='max_tokens_input',
+                min_value=0,
+                value=st.session_state.get('max_tokens', 1000),
+                help="要生成的最大標記數量。",
+                on_change=update_max_tokens
+            )
         st.write("\n")
-        st.text_area("角色設定", value=st.session_state.get('perplexity_system_prompt', ''),placeholder="你是一個專業的科技支援工程師。你的目標是幫助用戶解決各種技術問題，無論是硬體還是軟體問題。你應該詳細解釋解決方案，並確保用戶理解每一步驟。", help="用於給模型提供初始指導。", key="perplexity_system_prompt_input", on_change=update_perplexity_system_prompt, height=300)
+        st.text_area(
+            "角色設定",
+            value=st.session_state.get('perplexity_system_prompt', ''),
+            placeholder="你是一個專業的科技支援工程師。你的目標是幫助用戶解決各種技術問題，無論是硬體還是軟體問題。你應該詳細解釋解決方案，並確保用戶理解每一步驟。",
+            help="用於給模型提供初始指導。",
+            key="perplexity_system_prompt_input",
+            on_change=update_perplexity_system_prompt,
+            height=300
+        )
         st.write("\n")
-        with st.expander("模型參數",expanded=True):
+        with st.expander("模型參數", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
-                st.slider("選擇 Temperature",
-                          min_value=0.0, max_value=2.0, step=0.1,
-                          value=st.session_state['perplexity_temperature'],
-                          key='perplexity_temperature_slider',
-                          help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。",
-                          on_change=update_model_params, args=("Perplexity",))
+                st.slider(
+                    "選擇 Temperature",
+                    min_value=0.0,
+                    max_value=2.0,
+                    step=0.1,
+                    value=st.session_state['perplexity_temperature'],
+                    key='perplexity_temperature_slider',
+                    help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。",
+                    on_change=update_model_params,
+                    args=("Perplexity",)
+                )
             with col2:
-                st.slider("選擇 Top P",
-                          min_value=0.0, max_value=1.0, step=0.1,
-                          value=st.session_state['perplexity_top_p'],
-                          key='perplexity_top_p_slider',
-                          help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
-                          on_change=update_model_params, args=("Perplexity",))
+                st.slider(
+                    "選擇 Top P",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.1,
+                    value=st.session_state['perplexity_top_p'],
+                    key='perplexity_top_p_slider',
+                    help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
+                    on_change=update_model_params,
+                    args=("Perplexity",)
+                )
 
-            st.slider("選擇 Presence Penalty",
-                      min_value=-2.0, max_value=2.0, step=0.1,
-                      value=st.session_state['perplexity_presence_penalty'],
-                      key='perplexity_presence_penalty_slider',
-                      help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
-                      on_change=update_model_params, args=("Perplexity",))
+            st.slider(
+                "選擇 Presence Penalty",
+                min_value=-2.0,
+                max_value=2.0,
+                step=0.1,
+                value=st.session_state['perplexity_presence_penalty'],
+                key='perplexity_presence_penalty_slider',
+                help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
+                on_change=update_model_params,
+                args=("Perplexity",)
+            )
 
     # 保存模型設置
     settings['open_ai_model'] = st.session_state['open_ai_model']
@@ -1121,6 +1216,7 @@ if selected == "模型設定":
     settings['frequency_penalty'] = st.session_state['frequency_penalty']
     settings['max_tokens'] = st.session_state['max_tokens']
     save_settings(settings)
+
 
 if selected == "提示詞" and not st.session_state['dalle_enabled']:
     # 初始化 session state 變量
