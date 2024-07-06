@@ -1348,9 +1348,9 @@ if selected == "提示詞":
                 st.divider()
                 st.subheader("你的元件組合")
                 st.write("\n")
-                cols = st.columns(3)
+                cols = st.columns(4)
                 for i, component in enumerate(shortcut['components']):
-                    col = cols[i % 3]
+                    col = cols[i % 4]
                     with col:
                         if component['type'] == "text input":
                             st.text_input(component['label'], key=f'text_input_{idx}_{i}')
