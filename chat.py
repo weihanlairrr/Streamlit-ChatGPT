@@ -7,10 +7,10 @@ import asyncio
 import json
 import time
 import markdown2
-import streamlit_shadcn_ui as ui
 import re
 import html
 from io import BytesIO
+import streamlit_shadcn_ui as ui
 from PIL import Image
 
 # 保存和載入設置的函數
@@ -37,7 +37,7 @@ def load_chat_history():
     except FileNotFoundError:
         return {}
 
-# 保存和載入 shortcuts 的函數
+# 保存和載入快捷方式的函數
 def save_shortcuts():
     with open('shortcuts.json', 'w') as f:
         json.dump({
@@ -63,11 +63,99 @@ def load_shortcuts():
         }]
         st.session_state['exported_shortcuts'] = []
 
-# 初始化設置
+# 初始化設置和聊天歷史
 settings = load_settings()
 chat_history = load_chat_history()
 load_shortcuts()
 
+# 工具函數
+def get_image_as_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode("utf-8")
+
+# 頭像圖片
+assistant_avatar_gpt = get_image_as_base64("Images/ChatGPT Logo.png")
+assistant_avatar_perplexity = get_image_as_base64("Images/Perplexity Logo.png")
+user_avatar_default = get_image_as_base64("Images/Cutie.png")
+logo_base64 = get_image_as_base64("Images/Bot Logo.png")
+
+avatars = {
+    "Cutie": get_image_as_base64("Images/Cutie.png"),
+    "Boy": get_image_as_base64("Images/Boy.png"),
+    "Penguin": get_image_as_base64("Images/Penguin.png"),
+    "Otter": get_image_as_base64("Images/Otter.png"),
+    "Bird": get_image_as_base64("Images/Bird.png"),
+    "White": get_image_as_base64("Images/White.png"),
+    "Bear": get_image_as_base64("Images/Bear.png"),
+    "Girl": get_image_as_base64("Images/Girl.png"),
+    "Baby Girl": get_image_as_base64("Images/Baby Girl.png"),
+    "Dog": get_image_as_base64("Images/Dog.png"),
+    "Chinese": get_image_as_base64("Images/Chinese.png"),
+    "Monkey": get_image_as_base64("Images/Monkey.png"),
+}
+
+# 初始化狀態變量
+def init_session_state():
+    if 'prompt_submitted' not in st.session_state:
+        st.session_state['prompt_submitted'] = False
+
+    for key, default_value in [
+        ('chatbot_api_key', settings.get('chatbot_api_key', '')),
+        ('perplexity_api_key', settings.get('perplexity_api_key', '')),
+        ('open_ai_model', settings.get('open_ai_model', 'gpt-4o')),
+        ('perplexity_model', settings.get('perplexity_model', 'llama-3-sonar-large-32k-online')),
+        ('perplexity_temperature', settings.get('perplexity_temperature', 0.5)),
+        ('perplexity_top_p', settings.get('perplexity_top_p', 0.5)),
+        ('perplexity_presence_penalty', settings.get('perplexity_presence_penalty', 0.0)),
+        ('perplexity_max_tokens', settings.get('perplexity_max_tokens', 1000)),
+        ('perplexity_system_prompt', settings.get('perplexity_system_prompt', '')),
+        ('gpt_system_prompt', settings.get('gpt_system_prompt', '')),
+        ('language', settings.get('language', '繁體中文')),
+        ('temperature', settings.get('temperature', 0.5)),
+        ('top_p', settings.get('top_p', 0.5)),
+        ('presence_penalty', settings.get('presence_penalty', 0.0)),
+        ('frequency_penalty', settings.get('frequency_penalty', 0.0)),
+        ('max_tokens', settings.get('max_tokens', 1000)),
+        ('content', ''),
+        ('reset_confirmation', False),
+        ('tabs', ["對話 1"]),
+        ('current_tab', 1),
+        ('chat_started', False),
+        ('api_key_removed', False),
+        ('model_type', 'ChatGPT'),
+        ('user_avatar_chatgpt', settings.get('user_avatar_chatgpt', user_avatar_default)),
+        ('user_avatar_perplexity', settings.get('user_avatar_perplexity', user_avatar_default)),
+        ('prompt_submitted', False),  # 初始化 prompt_submitted 鍵
+    ]:
+        if key not in st.session_state:
+            st.session_state[key] = default_value
+
+    if f"messages_ChatGPT_{st.session_state['current_tab']}" not in st.session_state:
+        st.session_state[f"messages_ChatGPT_{st.session_state['current_tab']}"] = chat_history.get('ChatGPT_1', [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}])
+
+    if f"messages_Perplexity_{st.session_state['current_tab']}" not in st.session_state:
+        st.session_state[f"messages_Perplexity_{st.session_state['current_tab']}"] = chat_history.get('Perplexity_1', [{"role": "assistant", "content": "請輸入您的 Perplexity API Key" if not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}])
+
+    if 'tab_name_1' not in st.session_state:
+        st.session_state['tab_name_1'] = "對話 1"
+    
+    if 'reset_confirmed' not in st.session_state:
+        st.session_state['reset_confirmed'] = False
+
+    if st.session_state['model_type'] == "ChatGPT":
+        st.session_state['user_avatar'] = st.session_state['user_avatar_chatgpt']
+    else:
+        st.session_state['user_avatar'] = st.session_state['user_avatar_perplexity']
+
+    if 'avatar_selected' not in st.session_state:
+        st.session_state['avatar_selected'] = False
+
+    if 'expander_state' not in st.session_state:
+        st.session_state['expander_state'] = True
+
+init_session_state()
+
+# 自訂樣式
 st.markdown("""
     <style>
     .stButton > button {
@@ -88,10 +176,10 @@ st.markdown("""
         display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, rgba(3, 93, 229, 0.7) 100%);
     }
     p {
-        margin: 0;  /* 移除 p 元素的預設邊距 */
+        margin: 0;
     }
     h1, h2, h3, h4, h5, h6 {
-        margin: 0;  /* 移除標題元素的預設邊距 */
+        margin: 0;
     }
     .message {
         white-space: pre-wrap;
@@ -116,7 +204,7 @@ st.markdown("""
         margin-top: 1em; 
     }
     .message-container > :first-child h1, .message-container > :first-child h2, .message-container > :first-child h3, .message-container > :first-child h4, .message-container > :first-child h5, .message-container > :first-child h6 {
-        margin-top: 0;  
+        margin-top: 0;
     }
     .message-container pre {
         background-color: #1E1E1E;
@@ -124,18 +212,18 @@ st.markdown("""
         padding: 10px;
         overflow-x: auto;
         margin: 10px 0;
-        white-space: pre;  /* 保留縮排 */
+        white-space: pre;
     }
     .message-container pre code {
         font-family: 'Source Code Pro', 'Courier New', monospace;
         font-size: 15px;
         line-height: 1.4;
-        white-space: pre;  /* 保留縮排 */
+        white-space: pre;
         color: #f1f1f1;
     }
     .message-container code:not(pre code) {
         background: #1E1E1E;
-        color: #f1f1f1;  
+        color: #f1f1f1;
         font-size: 13px;
         border-radius: 4px;
         display: inline-flex; 
@@ -159,104 +247,20 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-def get_image_as_base64(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode("utf-8")
-
-# 在代碼的開頭或其他初始化變量的位置
-if 'prompt_submitted' not in st.session_state:
-    st.session_state['prompt_submitted'] = False
-
-# 在頁面載入時重置 prompt_submitted 標記
-st.session_state['prompt_submitted'] = False
-
-assistant_avatar_gpt = get_image_as_base64("Images/ChatGPT Logo.png")
-assistant_avatar_perplexity = get_image_as_base64("Images/Perplexity Logo.png")
-user_avatar_default = get_image_as_base64("Images/Cutie.png")
-logo_base64 = get_image_as_base64("Images/Bot Logo.png")
-
-avatars = {
-    "Cutie": get_image_as_base64("Images/Cutie.png"),
-    "Boy": get_image_as_base64("Images/Boy.png"),
-    "Penguin": get_image_as_base64("Images/Penguin.png"),
-    "Otter": get_image_as_base64("Images/Otter.png"),
-    "Bird": get_image_as_base64("Images/Bird.png"),
-    "White": get_image_as_base64("Images/White.png"),
-    "Bear": get_image_as_base64("Images/Bear.png"),
-    "Girl": get_image_as_base64("Images/Girl.png"),
-    "Baby Girl": get_image_as_base64("Images/Baby Girl.png"),
-    "Dog": get_image_as_base64("Images/Dog.png"),
-    "Chinese": get_image_as_base64("Images/Chinese.png"),
-    "Monkey": get_image_as_base64("Images/Monkey.png"),
-}
-
-# 初始化狀態變量
-for key, default_value in [
-    ('chatbot_api_key', settings.get('chatbot_api_key', '')),
-    ('perplexity_api_key', settings.get('perplexity_api_key', '')),
-    ('open_ai_model', settings.get('open_ai_model', 'gpt-4o')),
-    ('perplexity_model', settings.get('perplexity_model', 'llama-3-sonar-large-32k-online')),
-    ('perplexity_temperature', settings.get('perplexity_temperature', 0.5)),
-    ('perplexity_top_p', settings.get('perplexity_top_p', 0.5)),
-    ('perplexity_presence_penalty', settings.get('perplexity_presence_penalty', 0.0)),
-    ('perplexity_max_tokens', settings.get('perplexity_max_tokens', 1000)),
-    ('perplexity_system_prompt', settings.get('perplexity_system_prompt', '')),
-    ('gpt_system_prompt', settings.get('gpt_system_prompt', '')),
-    ('language', settings.get('language', '繁體中文')),
-    ('temperature', settings.get('temperature', 0.5)),
-    ('top_p', settings.get('top_p', 0.5)),
-    ('presence_penalty', settings.get('presence_penalty', 0.0)),
-    ('frequency_penalty', settings.get('frequency_penalty', 0.0)),
-    ('max_tokens', settings.get('max_tokens', 1000)),
-    ('content', ''),
-    ('reset_confirmation', False),
-    ('tabs', ["對話 1"]),
-    ('current_tab', 1),
-    ('chat_started', False),
-    ('api_key_removed', False),
-    ('model_type', 'ChatGPT'),
-    ('user_avatar_chatgpt', settings.get('user_avatar_chatgpt', user_avatar_default)),
-    ('user_avatar_perplexity', settings.get('user_avatar_perplexity', user_avatar_default)),
-    ('prompt_submitted', False),  # 初始化 prompt_submitted 鍵
-]:
-    if key not in st.session_state:
-        st.session_state[key] = default_value
-
-if f"messages_ChatGPT_{st.session_state['current_tab']}" not in st.session_state:
-    st.session_state[f"messages_ChatGPT_{st.session_state['current_tab']}"] = chat_history.get('ChatGPT_1', [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}])
-
-if f"messages_Perplexity_{st.session_state['current_tab']}" not in st.session_state:
-    st.session_state[f"messages_Perplexity_{st.session_state['current_tab']}"] = chat_history.get('Perplexity_1', [{"role": "assistant", "content": "請輸入您的 Perplexity API Key" if not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}])
-
-if 'tab_name_1' not in st.session_state:
-    st.session_state['tab_name_1'] = "對話 1"
-    
-if 'reset_confirmed' not in st.session_state:
-    st.session_state['reset_confirmed'] = False
-
-# 根據模型選擇設置 user_avatar
-if st.session_state['model_type'] == "ChatGPT":
-    st.session_state['user_avatar'] = st.session_state['user_avatar_chatgpt']
-else:
-    st.session_state['user_avatar'] = st.session_state['user_avatar_perplexity']
-
 def select_avatar(name, image):
-    # 檢查頭像是否真的改變
     if st.session_state['model_type'] == "ChatGPT":
         if st.session_state['user_avatar_chatgpt'] != image:
             st.session_state['user_avatar_chatgpt'] = image
-            st.session_state['user_avatar'] = image  # 更新当前使用的头像
+            st.session_state['user_avatar'] = image
             settings['user_avatar_chatgpt'] = image
             save_settings(settings)
-            # 設定標記，表示頭像已更新
             st.session_state['avatar_updated'] = True
     else:
         if st.session_state['user_avatar_perplexity'] != image:
             st.session_state['user_avatar_perplexity'] = image
-            st.session_state['user_avatar'] = image  # 更新当前使用的头像
+            st.session_state['user_avatar'] = image
             settings['user_avatar_perplexity'] = image
             save_settings(settings)
-            # 設定標記，表示頭像已更新
             st.session_state['avatar_updated'] = True
 
 def display_avatars():
@@ -265,10 +269,6 @@ def display_avatars():
         with cols[i % 6]:
             st.image(f"data:image/png;base64,{image}", use_column_width=True)
             st.button("選擇", key=name, on_click=select_avatar, args=(name, image))
-
-# 初始化狀態變量
-if 'avatar_selected' not in st.session_state:
-    st.session_state['avatar_selected'] = False
 
 async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt):
     try:
@@ -316,11 +316,9 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
             "Authorization": f"Bearer {st.session_state['perplexity_api_key']}"
         }
 
-        # 添加語言設定到 prompt
         if st.session_state['language']:
             prompt = prompt + f" 請使用{st.session_state['language']}回答。你的回答不需要提到你會使用{st.session_state['language']}。"
 
-        # 構建歷史上下文
         context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history])
         full_prompt = f"{system_prompt}\n\n{context}\nuser: {prompt}"
 
@@ -342,7 +340,6 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
         response = requests.post(url, headers=headers, json=data, stream=True)
         response.raise_for_status()
 
-        # 處理流式回應
         full_response = ""
         for line in response.iter_lines():
             if line:
@@ -368,7 +365,6 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
         yield f"JSON Decode Error: {str(e)}"
     except Exception as e:
         yield f"Unexpected Error: {str(e)}"
-
 
 def update_slider(key, value):
     st.session_state[key] = value
@@ -401,9 +397,8 @@ def reset_chat():
     st.session_state['reset_confirmation'] = False
     st.session_state['chat_started'] = False
     st.session_state['api_key_removed'] = False
-    st.session_state['reset_confirmed'] = True  # 設置標記為 True
+    st.session_state['reset_confirmed'] = True
 
-    # 保存重置後的聊天歷史
     chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[key]
     save_chat_history(chat_history)
 
@@ -429,30 +424,21 @@ def update_model_params(model_type):
             'perplexity_presence_penalty': st.session_state['perplexity_presence_penalty']
         })
 
-
 def format_message(text):
     if isinstance(text, (list, dict)):
         return f"<pre><code>{json.dumps(text, indent=2)}</code></pre>"
 
-    # 定義正則表達式來匹配反三引號
     code_pattern = re.compile(r'(```)(.*?)(```|$)', re.DOTALL)
 
     def code_replacer(match):
         code = match.group(2).strip()
-        # 不對反三引號包裹的內容進行轉義
         return f'<pre><code>{html.escape(code)}</code></pre>'
 
-    # 使用正則表達式替換反三引號包裹的程式碼內容
     text = code_pattern.sub(code_replacer, text)
-
-    # 將其餘的文本轉換為 HTML
     html_content = markdown2.markdown(text)
-
-    # 處理潛在的HTML標籤錯誤
     html_content = re.sub(r'(<[^>]*)(?<!>)<', r'\1', html_content)
 
     return html_content
-
 
 def update_and_save_setting(key, value):
     st.session_state[key] = value
@@ -622,26 +608,23 @@ async def handle_prompt_submission(prompt, current_tab_key):
         chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[current_tab_key]
         save_chat_history(chat_history)
 
-
 def update_exported_shortcuts():
     for exported_shortcut in st.session_state.get('exported_shortcuts', []):
         for shortcut in st.session_state['shortcuts']:
             if exported_shortcut['name'] == shortcut['name']:
                 exported_shortcut.update(shortcut)
 
-if 'expander_state' not in st.session_state:
-    st.session_state['expander_state'] = True
-
 def hide_expander():
     st.session_state['expander_state'] = False
     st.session_state['active_shortcut'] = None
 
+# 側邊欄設置
 with st.sidebar:
     st.markdown(f"""
-            <div class="logo-container">
-                <img src="data:image/png;base64,{logo_base64}" style="width: 100%; height: 100%; " />
-            </div>
-        """, unsafe_allow_html=True)
+        <div class="logo-container">
+            <img src="data:image/png;base64,{logo_base64}" style="width: 100%; height: 100%; " />
+        </div>
+    """, unsafe_allow_html=True)
 
     selected = option_menu("",
         ["對話",'模型設定','提示詞','頭像'],
@@ -655,7 +638,7 @@ with st.sidebar:
     )
     model_toggle = st.radio("", ["ChatGPT", "Perplexity"], key="model_type", horizontal=True, label_visibility="collapsed")
     st.write("\n")
-    # 根據模型選擇設置 avatar
+
     if model_toggle == "Perplexity":
         assistant_avatar = assistant_avatar_perplexity
         perplexity_api_key_input = st.text_input("請輸入 Perplexity API Key", value=st.session_state.get('perplexity_api_key', ''), type="password")
@@ -681,6 +664,7 @@ with st.sidebar:
                 st.session_state[f"messages_ChatGPT_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？" if api_key_input else "請輸入您的 OpenAI API Key"
             st.rerun()
 
+# 對話頁面
 current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
 if current_tab_key not in st.session_state:
     st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
@@ -692,11 +676,10 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
     if api_key_entered and 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
         with st.sidebar.expander('你的提示詞'):
             for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
-                col = st.columns(1)[0]  # 使用寬度為100%的單列
+                col = st.columns(1)[0]
                 with col:
                     if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "linear-gradient(135deg, #5A5A5A 0%, #2B2B2B 100%)", "color": "#f1f1f1"}):
                         st.session_state['active_shortcut'] = shortcut
-                    
 
 if selected == "對話":
     if st.session_state['reset_confirmed']:
@@ -705,8 +688,7 @@ if selected == "對話":
     current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
     if current_tab_key not in st.session_state:
         st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
-
-    # 顯示對話
+    
     if not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
         for msg in st.session_state[current_tab_key]:
             message_func(msg["content"], is_user=(msg["role"] == "user"))
@@ -720,7 +702,6 @@ if selected == "對話":
                 st.session_state[current_tab_key].append({"role": "user", "content": prompt})
                 message_func(prompt, is_user=True)
 
-                # 顯示 "Thinking..." 訊息
                 thinking_placeholder = st.empty()
                 st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
                 with thinking_placeholder.container():
@@ -732,7 +713,6 @@ if selected == "對話":
 
                 async def stream_openai_response():
                     async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt']):
-                        # 清除 "Thinking..." 訊息並開始流式回覆
                         if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
                             st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
                             thinking_placeholder.empty()
@@ -755,26 +735,18 @@ if selected == "對話":
                 asyncio.run(stream_openai_response())
 
         else:
-            # 輸入提示詞
             prompt = st.text_input("輸入提示詞")
-        
-            # 輸入不希望出現的內容
             negative_prompt = st.text_input("輸入不希望出現的內容（選填）")
-            # DALL-E 生成圖片邏輯
             col1, col2, col3 = st.columns(3)
             with col1:
-                # 選擇模型
                 model_choice = st.selectbox(
                     "選擇 DALL-E 模型",
                     ("DALL-E 3", "DALL-E 2"),
                     index=0,
                     placeholder="",
                 )
-        
-                # 根據選擇的模型進行轉換
                 model_choice = "dall-e-3" if model_choice == "DALL-E 3" else "dall-e-2"
-        
-                # 色彩偏好設定
+
                 color_preference_options = {
                     "無特定偏好": "no specific color preference",
                     "暖色調": "warm color scheme",
@@ -786,17 +758,15 @@ if selected == "對話":
                 }
                 selected_color_preference_zh = st.selectbox("色彩偏好", list(color_preference_options.keys()))
                 selected_color_preference_en = color_preference_options[selected_color_preference_zh]
-        
+
             with col2:
-                # 圖片尺寸選擇
                 size_options = {
                     "1024x1024": "1024x1024",
                     "1792x1024": "1792x1024",
                     "1024x1792": "1024x1792"
                 }
                 selected_size = st.selectbox("圖片尺寸", list(size_options.keys()))
-        
-                # 圖片效果選擇
+
                 effect_options = {
                     "無特定偏好": "no specific effect preference",
                     "顆粒質感": "grainy texture",
@@ -812,9 +782,8 @@ if selected == "對話":
                 }
                 selected_effect = st.selectbox("圖片效果", list(effect_options.keys()))
                 selected_effect_en = effect_options[selected_effect]
-        
+
             with col3:
-                # 圖片風格選擇
                 style_options = {
                     "無特定偏好": "no specific style preference",
                     "寫實風格": "realistic style",
@@ -840,8 +809,7 @@ if selected == "對話":
                 }
                 selected_style_zh = st.selectbox("圖片風格", list(style_options.keys()))
                 selected_style_en = style_options[selected_style_zh]
-        
-                # 光線設定選擇
+
                 light_options = {
                     "無特定偏好": "no specific lighting preference",
                     "攝影棚燈光": "studio lighting",
@@ -853,32 +821,27 @@ if selected == "對話":
                 }
                 selected_light_zh = st.selectbox("光線設定", list(light_options.keys()))
                 selected_light_en = light_options[selected_light_zh]
-        
-            # 細節程度調整
+
             detail_level = st.slider("細節程度", 1, 10, 5)
-        
-            # 生成圖片按鈕
+
             if st.button("生成圖片"):
                 if not prompt.strip():
                     warning_placeholder = st.empty()
                     warning_placeholder.markdown("<div class='custom-warning'>請輸入提示詞</div>", unsafe_allow_html=True)
                     time.sleep(2)
-
                     warning_placeholder.empty()
                 else:
                     with st.spinner('圖片生成中...'):
-                        # 整合 prompt
                         if selected_effect != "無特定效果":
                             full_prompt = f"{prompt}, with {selected_effect_en}, {selected_style_en} style, {selected_color_preference_en}, {selected_light_en}, with detail level {detail_level} out of 10"
                         else:
                             full_prompt = f"{prompt}, {selected_style_en} style, {selected_color_preference_en}, {selected_light_en}, with detail level {detail_level} out of 10"
-        
+
                         if negative_prompt:
                             full_prompt += f". Avoid including: {negative_prompt}"
-        
-                        # 配置客戶端
+
                         client = OpenAI(api_key=st.session_state['chatbot_api_key'])
-        
+
                         try:
                             response = client.images.generate(
                                 model=model_choice,
@@ -895,7 +858,6 @@ if selected == "對話":
                         except Exception as e:
                             st.error(f"圖片生成失敗：{str(e)}")
 
-
     if st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key']:
         prompt = st.chat_input()
         if prompt:
@@ -904,7 +866,6 @@ if selected == "對話":
             st.session_state[current_tab_key].append({"role": "user", "content": prompt})
             message_func(prompt, is_user=True)
 
-            # 顯示 "Thinking..." 訊息
             thinking_placeholder = st.empty()
             st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
             with thinking_placeholder.container():
@@ -912,11 +873,8 @@ if selected == "對話":
 
             response_container = st.empty()
             full_response = ""
-
-            # 構建歷史對話
             history = st.session_state[current_tab_key]
 
-            # 處理流式回應並逐步更新界面
             for response_message in generate_perplexity_response(
                     prompt,
                     history,
@@ -927,7 +885,6 @@ if selected == "對話":
                     st.session_state['max_tokens'],
                     st.session_state['perplexity_system_prompt']):
 
-                # 清除 "Thinking..." 訊息並開始流式回覆
                 if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
                     st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
                     thinking_placeholder.empty()
@@ -944,7 +901,6 @@ if selected == "對話":
                     unsafe_allow_html=True
                 )
 
-            # 最後將完整的回應添加到會話狀態中
             st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
             response_container.empty()
             message_func(full_response, is_user=False)
@@ -960,7 +916,6 @@ if selected == "對話":
             if st.session_state.get('reset_confirmation', False):
                 confirm_reset_chat()
 
-    # 當使用者點擊送出按鈕後的邏輯處理
     if 'active_shortcut' in st.session_state and st.session_state.get('active_shortcut') is not None:
         shortcut = st.session_state['active_shortcut']
         inputs = {}
@@ -1002,10 +957,8 @@ if selected == "對話":
             except KeyError as e:
                 st.error(f"缺少必需的輸入: {e}")
 
-    # 在頁面載入時重置 prompt_submitted 標記
     if 'prompt_submitted' in st.session_state:
         del st.session_state['prompt_submitted']
-
 
 def update_open_ai_model():
     model_display_names = {"GPT-4o": "gpt-4o", "GPT-3.5-Turbo": "gpt-3.5-turbo", "DALL-E": "DALL-E"}
@@ -1205,7 +1158,6 @@ if selected == "模型設定":
                 args=("Perplexity",)
             )
 
-    # 保存模型設置
     settings['open_ai_model'] = st.session_state['open_ai_model']
     settings['perplexity_model'] = st.session_state['perplexity_model']
     settings['perplexity_temperature'] = st.session_state['perplexity_temperature']
@@ -1222,9 +1174,8 @@ if selected == "模型設定":
     settings['max_tokens'] = st.session_state['max_tokens']
     save_settings(settings)
 
-
-if selected == "提示詞" and not st.session_state['open_ai_model'] == "DALL-E":
-    # 初始化 session state 變量
+# 提示詞頁面
+if selected == "提示詞":
     if 'shortcuts' not in st.session_state:
         st.session_state['shortcuts'] = load_shortcuts()
     if 'current_shortcut' not in st.session_state:
@@ -1276,9 +1227,7 @@ if selected == "提示詞" and not st.session_state['open_ai_model'] == "DALL-E"
             ]
 
             save_shortcuts()
-            # 手動更新變數來觸發重繪
             st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
-
 
     def cancel_delete_shortcut():
         st.session_state['delete_confirmation'] = None
@@ -1289,8 +1238,8 @@ if selected == "提示詞" and not st.session_state['open_ai_model'] == "DALL-E"
             with confirm:
                 if st.button("確認", key=f"confirm_delete_{index}_confirm"):
                     delete_shortcut(index)
-                    st.session_state['delete_confirmation'] = None  # Reset the confirmation state after deletion
-                    st.experimental_rerun()  # Rerun to reflect the deletion
+                    st.session_state['delete_confirmation'] = None
+                    st.experimental_rerun()
             with cancel:
                 if st.button("取消", key=f"cancel_delete_{index}_cancel", on_click=cancel_delete_shortcut):
                     pass
@@ -1301,7 +1250,6 @@ if selected == "提示詞" and not st.session_state['open_ai_model'] == "DALL-E"
         st.session_state['shortcuts'][idx]['prompt_template'] = st.session_state[f'prompt_template_{idx}']
         update_exported_shortcuts()
         save_shortcuts()
-
 
     def update_exported_shortcuts():
         for exported_shortcut in st.session_state.get('exported_shortcuts', []):
@@ -1314,14 +1262,10 @@ if selected == "提示詞" and not st.session_state['open_ai_model'] == "DALL-E"
         if new_name != st.session_state['shortcuts'][idx]['name']:
             old_name = st.session_state['shortcuts'][idx]['name']
             st.session_state['shortcuts'][idx]['name'] = new_name
-
-            # 同步更新 exported_shortcuts 中的名稱
             for exported_shortcut in st.session_state['exported_shortcuts']:
                 if exported_shortcut['name'] == old_name:
                     exported_shortcut['name'] = new_name
-
             save_shortcuts()
-            # 手動更新變數來觸發重繪
             st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
 
     with st.sidebar:
@@ -1336,7 +1280,6 @@ if selected == "提示詞" and not st.session_state['open_ai_model'] == "DALL-E"
                 st.session_state['current_shortcut'] = idx
                 shortcut = st.session_state['shortcuts'][idx]
 
-                # 初始化 prompt_template 鍵
                 if f'prompt_template_{idx}' not in st.session_state:
                     st.session_state[f'prompt_template_{idx}'] = shortcut['prompt_template']
 
@@ -1458,19 +1401,19 @@ if selected == "提示詞" and not st.session_state['open_ai_model'] == "DALL-E"
                             save_shortcuts()
                             st.markdown("<div class='custom-success'>成功輸出，請至對話頁查看</div>", unsafe_allow_html=True)
                             time.sleep(1)
-                            st.session_state['exported_shortcuts'].append(shortcut['name'])  # 防止按鈕再次出現
+                            st.session_state['exported_shortcuts'].append(shortcut['name'])
                             st.experimental_rerun()
 
-                # 在tab內新增刪除按鈕，確保刪除當前tab
                 st.write("\n")
                 if len(st.session_state['shortcuts']) > 1:
-                    tab_name = shortcut['name']  # 獲取當前tab的名稱
+                    tab_name = shortcut['name']
                     if st.button(f"刪除 {tab_name}", key=f'delete_tab_{idx}'):
                         confirm_delete_shortcut(idx)
 
                 if st.session_state.get('delete_confirmation') is not None:
                     confirm_delete_shortcut(st.session_state['delete_confirmation'])
 
+# 頭像頁面
 elif selected == "頭像":
     st.markdown(f"""
         <div style='text-align: center;'>
