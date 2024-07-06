@@ -633,7 +633,7 @@ with st.sidebar:
             "container": {"padding": "0!important", "background": "linear-gradient(180deg, #e5e5e5 0%, #f5f5f5 80%)"},
             "icon": {"color": "#FF8C00", "font-size": "18px"},
             "nav-link": {"font-size": "18px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
-            "nav-link-selected": {"background": "linear-gradient(-135deg, #35FAF9 0%, rgba(124, 45, 231, 0.8) 100%)", "color": "#F1f1f1"},
+            "nav-link-selected": {"background": "linear-gradient(-135deg, #6DD0FA 0%, rgba(124, 45, 231, 0.8) 100%)", "color": "#F1f1f1"},
         }
     )
     model_toggle = st.radio("", ["ChatGPT", "Perplexity"], key="model_type", horizontal=True, label_visibility="collapsed")
