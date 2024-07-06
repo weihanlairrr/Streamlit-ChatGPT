@@ -173,7 +173,7 @@ st.markdown("""
         background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
     }
     .stRadio > div {
-        display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background: linear-gradient(135deg, #58BBFF 30%, #3380FF 100%);
+        display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background: #ECECEC;
     }
     p {
         margin: 0;
@@ -678,7 +678,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
             for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
                 col = st.columns(1)[0]
                 with col:
-                    if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "linear-gradient(135deg, #5A5A5A 0%, #2B2B2B 100%)", "color": "#f1f1f1"}):
+                    if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#FBF1BC", "color": "#2b2727"}):
                         st.session_state['active_shortcut'] = shortcut
 
 if selected == "對話":
