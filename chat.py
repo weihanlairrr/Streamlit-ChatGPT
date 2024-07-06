@@ -160,7 +160,7 @@ st.markdown("""
     <style>
     .stButton > button {
         padding: 5px 20px;
-        background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
+        background: linear-gradient(135deg, #36A5FD 30%, #1664E6 100%);
         color: #2B2727;
         border: none;
         border-radius: 5px;
@@ -170,7 +170,7 @@ st.markdown("""
         width: 100%;
     }
     .stButton > button:hover {
-        background: linear-gradient(-135deg, #35FAF9 0%, rgba(124, 45, 231, 0.8) 100%);
+        background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
     }
     .stRadio > div {
         display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
