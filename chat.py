@@ -160,7 +160,7 @@ st.markdown("""
     <style>
     .stButton > button {
         padding: 5px 20px;
-        background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, rgba(3, 93, 229, 0.7) 100%);
+        background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
         color: #2B2727;
         border: none;
         border-radius: 5px;
@@ -170,10 +170,10 @@ st.markdown("""
         width: 100%;
     }
     .stButton > button:hover {
-        background: linear-gradient(135deg, rgba(83, 138, 217, 0.8) 0%, rgba(124, 45, 231, 0.8) 100%);
+        background: linear-gradient(-135deg, #35FAF9 0%, rgba(124, 45, 231, 0.8) 100%);
     }
     .stRadio > div {
-        display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, rgba(3, 93, 229, 0.7) 100%);
+        display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
     }
     p {
         margin: 0;
@@ -479,7 +479,7 @@ def message_func(text, is_user=False, is_df=False):
     if is_user:
         avatar_url = user_url
         message_alignment = "flex-end"
-        message_bg_color = "linear-gradient(135deg, #00C0FB 0%, #035DE5 100%)"
+        message_bg_color = "linear-gradient(135deg, #30A2FD 0%, #035DE5 100%)"
         avatar_class = "user-avatar"
         avatar_size = "width: 32px; height: 40px;"
         text_with_line_breaks = html.escape(text).replace("\n", "<br>")
@@ -633,7 +633,7 @@ with st.sidebar:
             "container": {"padding": "0!important", "background": "linear-gradient(180deg, #e5e5e5 0%, #f5f5f5 80%)"},
             "icon": {"color": "#FF8C00", "font-size": "18px"},
             "nav-link": {"font-size": "18px", "text-align": "left", "margin":"5px", "--hover-color": "#eee"},
-            "nav-link-selected": {"background": "linear-gradient(135deg, rgba(83, 138, 217, 0.8) 0%, rgba(124, 45, 231, 0.8) 100%)", "color": "#F1f1f1"},
+            "nav-link-selected": {"background": "linear-gradient(-135deg, #35FAF9 0%, rgba(124, 45, 231, 0.8) 100%)", "color": "#F1f1f1"},
         }
     )
     model_toggle = st.radio("", ["ChatGPT", "Perplexity"], key="model_type", horizontal=True, label_visibility="collapsed")
@@ -1417,7 +1417,7 @@ if selected == "提示詞":
 elif selected == "頭像":
     st.markdown(f"""
         <div style='text-align: center;'>
-            <div style='display: inline-block; border-radius: 60%; overflow: hidden; border: 0px; background: linear-gradient(135deg, rgba(83, 138, 217, 0.8) 0%, rgba(124, 45, 231, 0.8) 100%);'>
+            <div style='display: inline-block; border-radius: 60%; overflow: hidden; border: 0px; background: linear-gradient(-135deg, #35FAF9 0%, rgba(124, 45, 231, 0.8) 100%);'>
                 <img src="data:image/png;base64,{st.session_state['user_avatar']}" style='width: 150px; border-radius: 50%;'/>
             </div>
             <p>\n</p>
