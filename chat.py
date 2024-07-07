@@ -171,7 +171,7 @@ st.markdown("""
         background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
     }
     .stRadio > div {
-        display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background: #ECECEC;
+        display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background:  linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
     }
     p {
         margin: 0;
