@@ -1313,12 +1313,6 @@ if selected == "提示詞":
         update_exported_shortcuts()
         save_shortcuts()
 
-    def update_exported_shortcuts():
-        for exported_shortcut in st.session_state.get('exported_shortcuts', []):
-            for shortcut in st.session_state['shortcuts']:
-                if exported_shortcut['name'] == shortcut['name']:
-                    exported_shortcut.update(shortcut)
-
     def update_shortcut_name(idx):
         new_name = st.session_state[f'shortcut_name_{idx}']
         if new_name != st.session_state['shortcuts'][idx]['name']:
