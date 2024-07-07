@@ -133,9 +133,6 @@ def init_session_state():
 
     if f"messages_Perplexity" not in st.session_state:
         st.session_state[f"messages_Perplexity"] = chat_history.get('Perplexity', [{"role": "assistant", "content": "請輸入您的 Perplexity API Key" if not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}])
-
-    if 'tab_name_1' not in st.session_state:
-        st.session_state['tab_name_1'] = "對話 1"
     
     if 'reset_confirmed' not in st.session_state:
         st.session_state['reset_confirmed'] = False
