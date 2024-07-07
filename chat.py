@@ -30,12 +30,13 @@ def google_search(query, num_results=5):
 
 async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language, use_google_search):
     if use_google_search:
-        search_results = google_search(messages[-1]['content'])
+        user_prompt = messages[-1]['content']
+        search_results = google_search(user_prompt)
         if search_results:
-            google_search_prompt = f"根據以下Google搜尋結果,請提供一個能夠涵蓋完整內容的{language}摘要:\n\n" + "\n".join(search_results)
+            google_search_prompt = f"將以下Google搜尋結果根據使用者的要求：「{user_prompt}」，以{language}回答:\n\n" + "\n".join(search_results)
             messages[-1]['content'] = google_search_prompt
         else:
-            messages[-1]['content'] = "未找到相關的Google搜尋結果，請直接回答問題。"
+            messages[-1]['content'] = "未找到相關的Google搜尋結果。"
 
     try:
         if system_prompt:
@@ -77,10 +78,10 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
     if use_google_search:
         search_results = google_search(prompt)
         if search_results:
-            google_search_prompt = f"根據以下Google搜尋結果,請提供一個能夠涵蓋完整內容的{language}摘要:\n\n" + "\n".join(search_results)
+            google_search_prompt = f"將以下Google搜尋結果根據使用者的要求：「{prompt}」，以{language}回答:\n\n" + "\n".join(search_results)
             prompt = google_search_prompt
         else:
-            prompt = "未找到相關的Google搜尋結果，請直接回答問題。"
+            prompt = "未找到相關的Google搜尋結果。"
 
     try:
         url = "https://api.perplexity.ai/chat/completions"
@@ -283,9 +284,6 @@ def init_session_state():
                     st.session_state[f"messages_Perplexity"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
                 else:
                     st.session_state[f"messages_Perplexity"] = [{"role": "assistant", "content": "請輸入您的 Perplexity API Key"}]
-
-    if 'tab_name_1' not in st.session_state:
-        st.session_state['tab_name_1'] = "對話 1"
     
     if 'reset_confirmed' not in st.session_state:
         st.session_state['reset_confirmed'] = False
@@ -1300,12 +1298,12 @@ if selected == "提示詞":
         if st.session_state.get('delete_confirmation') == index:
             confirm, cancel = st.columns(2)
             with confirm:
-                if st.button("確認", key=f"confirm_delete_{index}_confirm"):
+                if st.button("確認", key=f"confirm_delete_{st.session_state['current_shortcut']}_confirm"):
                     delete_shortcut(index)
                     st.session_state['delete_confirmation'] = None
                     st.experimental_rerun()
             with cancel:
-                if st.button("取消", key=f"cancel_delete_{index}_cancel", on_click=cancel_delete_shortcut):
+                if st.button("取消", key=f"cancel_delete_{st.session_state['current_shortcut']}_cancel", on_click=cancel_delete_shortcut):
                     pass
         else:
             st.session_state['delete_confirmation'] = index
