@@ -13,8 +13,31 @@ import html
 from io import BytesIO
 import streamlit_shadcn_ui as ui
 from PIL import Image
+from googleapiclient.discovery import build
 
-async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
+google_api_key = "AIzaSyAF_AiOCwkVD0Y2wb0Fc4dkV3CM0V9RZLY"
+cse_id = "1325312d1ab5c4b0e"
+# 創建Google搜尋客戶端
+google_service = build("customsearch", "v1", developerKey=google_api_key)
+
+def google_search(query, num_results=5):
+    try:
+        result = google_service.cse().list(q=query, cx=cse_id, num=num_results).execute()
+        return [item['snippet'] for item in result.get('items', []) if 'snippet' in item]
+    except Exception as e:
+        st.error(f"Google搜尋出錯：{str(e)}")
+        return []
+
+async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language, use_google_search):
+    if use_google_search:
+        user_prompt = messages[-1]['content']
+        search_results = google_search(user_prompt)
+        if search_results:
+            google_search_prompt = f"將以下Google搜尋結果根據使用者的要求：「{user_prompt}」，以{language}回答:\n\n" + "\n".join(search_results)
+            messages[-1]['content'] = google_search_prompt
+        else:
+            messages[-1]['content'] = "未找到相關的Google搜尋結果。"
+
     try:
         if system_prompt:
             messages.insert(0, {"role": "system", "content": system_prompt})
@@ -51,7 +74,15 @@ async def get_openai_response(client, model, messages, temperature, top_p, prese
         else:
             yield f"Error: {error_message}"
 
-def generate_perplexity_response(prompt, history, model, temperature, top_p, presence_penalty, max_tokens, system_prompt, language):
+def generate_perplexity_response(prompt, history, model, temperature, top_p, presence_penalty, max_tokens, system_prompt, language, use_google_search):
+    if use_google_search:
+        search_results = google_search(prompt)
+        if search_results:
+            google_search_prompt = f"將以下Google搜尋結果根據使用者的要求：「{prompt}」，以{language}回答:\n\n" + "\n".join(search_results)
+            prompt = google_search_prompt
+        else:
+            prompt = "未找到相關的Google搜尋結果。"
+
     try:
         url = "https://api.perplexity.ai/chat/completions"
         headers = {
@@ -361,6 +392,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+
 def select_avatar(name, image):
     if st.session_state['model_type'] == "ChatGPT":
         if st.session_state['user_avatar_chatgpt'] != image:
@@ -384,13 +416,13 @@ def display_avatars():
             st.image(f"data:image/png;base64,{image}", use_column_width=True)
             st.button("選擇", key=name, on_click=select_avatar, args=(name, image))
 
-async def handle_prompt_submission(prompt):
+async def handle_prompt_submission(prompt, use_google_search):
     if st.session_state['model_type'] == "ChatGPT":
         client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
         message_func(prompt, is_user=True)
 
         thinking_placeholder = st.empty()
-        status_text = "Thinking..."
+        status_text = "Searching..." if use_google_search else "Thinking..."
         st.session_state["messages_ChatGPT"].append({"role": "assistant", "content": status_text})
         with thinking_placeholder.container():
             message_func(status_text, is_user=False)
@@ -400,7 +432,7 @@ async def handle_prompt_submission(prompt):
         
         messages = st.session_state["messages_ChatGPT"] + [{"role": "user", "content": prompt}]
         
-        async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
+        async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language'], use_google_search):
             if status_text in [msg['content'] for msg in st.session_state["messages_ChatGPT"] if msg['role'] == 'assistant']:
                 st.session_state["messages_ChatGPT"] = [msg for msg in st.session_state["messages_ChatGPT"] if msg['content'] != status_text]
                 thinking_placeholder.empty()
@@ -427,7 +459,7 @@ async def handle_prompt_submission(prompt):
         message_func(prompt, is_user=True)
 
         thinking_placeholder = st.empty()
-        status_text = "Thinking..."
+        status_text = "Searching..." if use_google_search else "Thinking..."
         st.session_state["messages_Perplexity"].append({"role": "assistant", "content": status_text})
         with thinking_placeholder.container():
             message_func(status_text, is_user=False)
@@ -446,7 +478,8 @@ async def handle_prompt_submission(prompt):
                 st.session_state['presence_penalty'],
                 st.session_state['max_tokens'],
                 st.session_state['perplexity_system_prompt'],
-                st.session_state['language']):
+                st.session_state['language'],
+                use_google_search):
 
             if status_text in [msg['content'] for msg in st.session_state["messages_Perplexity"] if msg['role'] == 'assistant']:
                 st.session_state["messages_Perplexity"] = [msg for msg in st.session_state["messages_Perplexity"] if msg['content'] != status_text]
@@ -703,6 +736,8 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 with col:
                     if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#FBF1BC", "color": "#2b2727"}):
                         st.session_state['active_shortcut'] = shortcut
+
+        use_google_search = st.sidebar.checkbox("使用Google搜尋", key="use_google_search")
         
     if api_key_entered and 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
         with st.sidebar:
@@ -732,7 +767,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                     message_func(prompt, is_user=True)
 
                     thinking_placeholder = st.empty()
-                    status_text = "Thinking..."
+                    status_text = "Searching..." if st.session_state['use_google_search'] else "Thinking..."
                     st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": status_text})
                     with thinking_placeholder.container():
                         message_func(status_text, is_user=False)
@@ -742,7 +777,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                     full_response = ""
 
                     async def stream_openai_response():
-                        async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
+                        async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language'], st.session_state['use_google_search']):
                             if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
                                 st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
                                 thinking_placeholder.empty()
@@ -896,7 +931,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 message_func(prompt, is_user=True)
 
                 thinking_placeholder = st.empty()
-                status_text = "Thinking..."
+                status_text = "Searching..." if st.session_state['use_google_search'] else "Thinking..."
                 st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": status_text})
                 with thinking_placeholder.container():
                     message_func(status_text, is_user=False)
@@ -914,7 +949,8 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                         st.session_state['presence_penalty'],
                         st.session_state['max_tokens'],
                         st.session_state['perplexity_system_prompt'],
-                        st.session_state['language']):
+                        st.session_state['language'],
+                        st.session_state['use_google_search']):
 
                     if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
                         st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
@@ -977,7 +1013,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 prompt = prompt_template.replace("{{", "{").replace("}}", "}")
                 st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
     
-                asyncio.run(handle_prompt_submission(prompt))
+                asyncio.run(handle_prompt_submission(prompt, use_google_search))
     
                 st.session_state['prompt_submitted'] = True
             except KeyError as e:
@@ -1422,7 +1458,7 @@ if selected == "提示詞":
                             st.markdown("<div class='custom-success'>成功輸出，請至對話頁查看</div>", unsafe_allow_html=True)
                             time.sleep(1)
                             st.session_state['exported_shortcuts'].append(shortcut['name'])
-                            st.experimental_rerun()
+                            st.rerun()
 
                 st.write("\n")
                 if len(st.session_state['shortcuts']) > 1:
