@@ -266,24 +266,24 @@ def init_session_state():
             st.session_state['messages_ChatGPT'] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}]
         else:
             st.session_state['messages_Perplexity'] = [{"role": "assistant", "content": "請輸入您的 Perplexity API Key" if not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
-        
+    
         st.session_state['reset_triggered'] = False  # 重置 reset_triggered 狀態
     else:
-        if f"messages_ChatGPT" not in st.session_state:
-            st.session_state[f"messages_ChatGPT"] = chat_history_gpt.get('ChatGPT', [])
-            if not st.session_state[f"messages_ChatGPT"]:
+        if "messages_ChatGPT" not in st.session_state:
+            st.session_state["messages_ChatGPT"] = chat_history_gpt.get('ChatGPT', [])
+            if not st.session_state["messages_ChatGPT"]:
                 if st.session_state['chatbot_api_key']:
-                    st.session_state[f"messages_ChatGPT"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
+                    st.session_state["messages_ChatGPT"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
                 else:
-                    st.session_state[f"messages_ChatGPT"] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key"}]
-
-        if f"messages_Perplexity" not in st.session_state:
-            st.session_state[f"messages_Perplexity"] = chat_history_perplexity.get('Perplexity', [])
-            if not st.session_state[f"messages_Perplexity"]:
+                    st.session_state["messages_ChatGPT"] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key"}]
+    
+        if "messages_Perplexity" not in st.session_state:
+            st.session_state["messages_Perplexity"] = chat_history_perplexity.get('Perplexity', [])
+            if not st.session_state["messages_Perplexity"]:
                 if st.session_state['perplexity_api_key']:
-                    st.session_state[f"messages_Perplexity"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
+                    st.session_state["messages_Perplexity"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
                 else:
-                    st.session_state[f"messages_Perplexity"] = [{"role": "assistant", "content": "請輸入您的 Perplexity API Key"}]
+                    st.session_state["messages_Perplexity"] = [{"role": "assistant", "content": "請輸入您的 Perplexity API Key"}]
     
     if 'reset_confirmed' not in st.session_state:
         st.session_state['reset_confirmed'] = False
