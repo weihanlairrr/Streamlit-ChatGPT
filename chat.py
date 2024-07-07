@@ -118,8 +118,6 @@ def init_session_state():
         ('max_tokens', settings.get('max_tokens', 1000)),
         ('content', ''),
         ('reset_confirmation', False),
-        ('tabs', ["對話 1"]),
-        ('current_tab', 1),
         ('chat_started', False),
         ('api_key_removed', False),
         ('model_type', 'ChatGPT'),
@@ -130,11 +128,11 @@ def init_session_state():
         if key not in st.session_state:
             st.session_state[key] = default_value
 
-    if f"messages_ChatGPT_{st.session_state['current_tab']}" not in st.session_state:
-        st.session_state[f"messages_ChatGPT_{st.session_state['current_tab']}"] = chat_history.get('ChatGPT_1', [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}])
+    if f"messages_ChatGPT" not in st.session_state:
+        st.session_state[f"messages_ChatGPT"] = chat_history.get('ChatGPT', [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}])
 
-    if f"messages_Perplexity_{st.session_state['current_tab']}" not in st.session_state:
-        st.session_state[f"messages_Perplexity_{st.session_state['current_tab']}"] = chat_history.get('Perplexity_1', [{"role": "assistant", "content": "請輸入您的 Perplexity API Key" if not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}])
+    if f"messages_Perplexity" not in st.session_state:
+        st.session_state[f"messages_Perplexity"] = chat_history.get('Perplexity', [{"role": "assistant", "content": "請輸入您的 Perplexity API Key" if not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}])
 
     if 'tab_name_1' not in st.session_state:
         st.session_state['tab_name_1'] = "對話 1"
@@ -389,7 +387,7 @@ def confirm_reset_chat():
             pass
 
 def reset_chat():
-    key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
+    key = f"messages_{st.session_state['model_type']}"
     if st.session_state['model_type'] == 'ChatGPT':
         st.session_state[key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}]
     else:
@@ -399,7 +397,7 @@ def reset_chat():
     st.session_state['api_key_removed'] = False
     st.session_state['reset_confirmed'] = True
 
-    chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[key]
+    chat_history[st.session_state['model_type']] = st.session_state[key]
     save_chat_history(chat_history)
 
 def update_model_params(model_type):
@@ -525,24 +523,24 @@ def message_func(text, is_user=False, is_df=False):
                 unsafe_allow_html=True,
             )
 
-async def handle_prompt_submission(prompt, current_tab_key):
+async def handle_prompt_submission(prompt):
     if st.session_state['model_type'] == "ChatGPT":
         client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
         message_func(prompt, is_user=True)
 
         thinking_placeholder = st.empty()
-        st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
+        st.session_state["messages_ChatGPT"].append({"role": "assistant", "content": "Thinking..."})
         with thinking_placeholder.container():
             message_func("Thinking...", is_user=False)
 
         response_container = st.empty()
         full_response = ""
         
-        messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
+        messages = st.session_state["messages_ChatGPT"] + [{"role": "user", "content": prompt}]
         
         async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt']):
-            if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
-                st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
+            if "Thinking..." in [msg['content'] for msg in st.session_state["messages_ChatGPT"] if msg['role'] == 'assistant']:
+                st.session_state["messages_ChatGPT"] = [msg for msg in st.session_state["messages_ChatGPT"] if msg['content'] != "Thinking..."]
                 thinking_placeholder.empty()
 
             full_response = response_message
@@ -557,24 +555,24 @@ async def handle_prompt_submission(prompt, current_tab_key):
                 unsafe_allow_html=True
             )
 
-        st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
+        st.session_state["messages_ChatGPT"].append({"role": "assistant", "content": full_response})
         response_container.empty()
         message_func(full_response, is_user=False)
-        chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[current_tab_key]
+        chat_history[st.session_state['model_type']] = st.session_state["messages_ChatGPT"]
         save_chat_history(chat_history)
 
     elif st.session_state['model_type'] == "Perplexity":
         message_func(prompt, is_user=True)
 
         thinking_placeholder = st.empty()
-        st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
+        st.session_state["messages_Perplexity"].append({"role": "assistant", "content": "Thinking..."})
         with thinking_placeholder.container():
             message_func("Thinking...", is_user=False)
 
         response_container = st.empty()
         full_response = ""
 
-        history = st.session_state[current_tab_key]
+        history = st.session_state["messages_Perplexity"]
         
         for response_message in generate_perplexity_response(
                 prompt,
@@ -586,8 +584,8 @@ async def handle_prompt_submission(prompt, current_tab_key):
                 st.session_state['max_tokens'],
                 st.session_state['perplexity_system_prompt']):
 
-            if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
-                st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
+            if "Thinking..." in [msg['content'] for msg in st.session_state["messages_Perplexity"] if msg['role'] == 'assistant']:
+                st.session_state["messages_Perplexity"] = [msg for msg in st.session_state["messages_Perplexity"] if msg['content'] != "Thinking..."]
                 thinking_placeholder.empty()
 
             full_response = response_message
@@ -602,10 +600,10 @@ async def handle_prompt_submission(prompt, current_tab_key):
                 unsafe_allow_html=True
             )
 
-        st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
+        st.session_state["messages_Perplexity"].append({"role": "assistant", "content": full_response})
         response_container.empty()
         message_func(full_response, is_user=False)
-        chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[current_tab_key]
+        chat_history[st.session_state['model_type']] = st.session_state["messages_Perplexity"]
         save_chat_history(chat_history)
 
 def update_exported_shortcuts():
@@ -648,9 +646,9 @@ with st.sidebar:
             save_settings(settings)
             if not st.session_state['chat_started']:
                 if perplexity_api_key_input:
-                    st.session_state[f"messages_Perplexity_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？"
+                    st.session_state["messages_Perplexity"][0]['content'] = "請問需要什麼協助？"
                 else:
-                    st.session_state[f"messages_Perplexity_{st.session_state['current_tab']}"][0]['content'] = "請輸入您的 Perplexity API Key"
+                    st.session_state["messages_Perplexity"][0]['content'] = "請輸入您的 Perplexity API Key"
             st.rerun()
 
     else:
@@ -661,14 +659,10 @@ with st.sidebar:
             settings['chatbot_api_key'] = api_key_input
             save_settings(settings)
             if not st.session_state['chat_started']:
-                st.session_state[f"messages_ChatGPT_{st.session_state['current_tab']}"][0]['content'] = "請問需要什麼協助？" if api_key_input else "請輸入您的 OpenAI API Key"
+                st.session_state["messages_ChatGPT"][0]['content'] = "請問需要什麼協助？" if api_key_input else "請輸入您的 OpenAI API Key"
             st.rerun()
 
 # 對話頁面
-current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
-if current_tab_key not in st.session_state:
-    st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
-
 if selected == "對話" and 'exported_shortcuts' in st.session_state:
     api_key_entered = (st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']) or \
               (st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key'])
@@ -685,12 +679,11 @@ if selected == "對話":
     if st.session_state['reset_confirmed']:
         st.session_state['reset_confirmed'] = False
         
-    current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
-    if current_tab_key not in st.session_state:
-        st.session_state[current_tab_key] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
+    if f"messages_{st.session_state['model_type']}" not in st.session_state:
+        st.session_state[f"messages_{st.session_state['model_type']}"] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
     
     if not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
-        for msg in st.session_state[current_tab_key]:
+        for msg in st.session_state[f"messages_{st.session_state['model_type']}"]:
             message_func(msg["content"], is_user=(msg["role"] == "user"))
 
     if st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']:
@@ -699,22 +692,22 @@ if selected == "對話":
             if prompt:
                 st.session_state['chat_started'] = True
                 client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
-                st.session_state[current_tab_key].append({"role": "user", "content": prompt})
+                st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
                 message_func(prompt, is_user=True)
 
                 thinking_placeholder = st.empty()
-                st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
+                st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": "Thinking..."})
                 with thinking_placeholder.container():
                     message_func("Thinking...", is_user=False)
 
                 response_container = st.empty()
-                messages = st.session_state[current_tab_key] + [{"role": "user", "content": prompt}]
+                messages = st.session_state[f"messages_{st.session_state['model_type']}"] + [{"role": "user", "content": prompt}]
                 full_response = ""
 
                 async def stream_openai_response():
                     async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt']):
-                        if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
-                            st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
+                        if "Thinking..." in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
+                            st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != "Thinking..."]
                             thinking_placeholder.empty()
 
                         full_response = response_message
@@ -726,10 +719,10 @@ if selected == "對話":
                             </div>
                         """, unsafe_allow_html=True)
 
-                    st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
+                    st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": full_response})
                     response_container.empty()
                     message_func(full_response, is_user=False)
-                    chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[current_tab_key]
+                    chat_history[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
                     save_chat_history(chat_history)
 
                 asyncio.run(stream_openai_response())
@@ -862,18 +855,17 @@ if selected == "對話":
         prompt = st.chat_input()
         if prompt:
             st.session_state['chat_started'] = True
-            current_tab_key = f"messages_{st.session_state['model_type']}_{st.session_state['current_tab']}"
-            st.session_state[current_tab_key].append({"role": "user", "content": prompt})
+            st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
             message_func(prompt, is_user=True)
 
             thinking_placeholder = st.empty()
-            st.session_state[current_tab_key].append({"role": "assistant", "content": "Thinking..."})
+            st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": "Thinking..."})
             with thinking_placeholder.container():
                 message_func("Thinking...", is_user=False)
 
             response_container = st.empty()
             full_response = ""
-            history = st.session_state[current_tab_key]
+            history = st.session_state[f"messages_{st.session_state['model_type']}"]
 
             for response_message in generate_perplexity_response(
                     prompt,
@@ -885,8 +877,8 @@ if selected == "對話":
                     st.session_state['max_tokens'],
                     st.session_state['perplexity_system_prompt']):
 
-                if "Thinking..." in [msg['content'] for msg in st.session_state[current_tab_key] if msg['role'] == 'assistant']:
-                    st.session_state[current_tab_key] = [msg for msg in st.session_state[current_tab_key] if msg['content'] != "Thinking..."]
+                if "Thinking..." in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
+                    st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != "Thinking..."]
                     thinking_placeholder.empty()
 
                 full_response = response_message
@@ -895,16 +887,16 @@ if selected == "對話":
                     <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                         <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
                         <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 75%; word-wrap: break-word; word-break: break-all;">
-                            {format_message(full_response)} \n </div>
+                            {full_response} \n </div>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
 
-            st.session_state[current_tab_key].append({"role": "assistant", "content": full_response})
+            st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": full_response})
             response_container.empty()
             message_func(full_response, is_user=False)
-            chat_history[st.session_state['model_type'] + '_' + str(st.session_state['current_tab'])] = st.session_state[current_tab_key]
+            chat_history[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
             save_chat_history(chat_history)
 
     with st.sidebar:
@@ -949,9 +941,9 @@ if selected == "對話":
                 prompt_template = prompt_template.replace(f"{{{{{key}}}}}", f"{inputs[key]}")
             try:
                 prompt = prompt_template.replace("{{", "{").replace("}}", "}")
-                st.session_state[current_tab_key].append({"role": "user", "content": prompt})
+                st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
     
-                asyncio.run(handle_prompt_submission(prompt, current_tab_key))
+                asyncio.run(handle_prompt_submission(prompt))
     
                 st.session_state['prompt_submitted'] = True
             except KeyError as e:
