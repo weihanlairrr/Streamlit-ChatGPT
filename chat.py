@@ -123,7 +123,7 @@ def init_session_state():
         ('model_type', 'ChatGPT'),
         ('user_avatar_chatgpt', settings.get('user_avatar_chatgpt', user_avatar_default)),
         ('user_avatar_perplexity', settings.get('user_avatar_perplexity', user_avatar_default)),
-        ('prompt_submitted', False),  # 初始化 prompt_submitted 鍵
+        ('prompt_submitted', False)
     ]:
         if key not in st.session_state:
             st.session_state[key] = default_value
@@ -171,7 +171,7 @@ st.markdown("""
         background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
     }
     .stRadio > div {
-        display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background:  linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
+        display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
     }
     p {
         margin: 0;
