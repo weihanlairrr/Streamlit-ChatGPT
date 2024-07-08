@@ -537,22 +537,6 @@ def update_model_params(model_type):
             'perplexity_presence_penalty': st.session_state['perplexity_presence_penalty']
         })
 
-def format_message(text):
-    if isinstance(text, (list, dict)):
-        return f"<pre><code>{json.dumps(text, indent=2)}</code></pre>"
-
-    code_pattern = re.compile(r'(```)(.*?)(```|$)', re.DOTALL)
-
-    def code_replacer(match):
-        code = match.group(2).strip()
-        return f'<pre><code>{html.escape(code)}</code></pre>'
-
-    text = code_pattern.sub(code_replacer, text)
-    html_content = markdown2.markdown(text)
-    html_content = re.sub(r'(<[^>]*)(?<!>)<', r'\1', html_content)
-
-    return html_content
-
 def update_and_save_setting(key, value):
     st.session_state[key] = value
     settings[key] = value
@@ -602,7 +586,6 @@ def format_message(text):
 
 def parse_markdown_tables(markdown_text):
     lines = markdown_text.strip().split("\n")
-    tables = []
     current_table = []
     combined_result = []
 
