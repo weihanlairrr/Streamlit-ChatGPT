@@ -666,8 +666,18 @@ def message_func(text, is_user=False):
 
         for item in result:
             if isinstance(item, pd.DataFrame):
+                item.index = item.index + 1
+                styled_item = item.style.set_table_styles(
+                    [{'selector': 'thead th', 'props': [('background-color', '#333'), ('color', 'white')]},
+                     {'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#f2f2f2')]},
+                     {'selector': 'tbody tr:hover', 'props': [('background-color', '#ddd')]}]
+                ).set_properties(**{'text-align': 'left', 'font-family': 'Arial', 'font-size': '14px'})
                 combined_result.append('<div style="height: 15px;"></div>')  # 在每個表格上方增加較小的空行
-                combined_result.append(item.to_html(index=False, border=0, justify='left'))
+                styled_html = styled_item.to_html()
+                styled_html = styled_html.replace('border="1"', 'border="0"')  
+                styled_html = styled_html.replace('<th>', '<th style="border: none;">') 
+                styled_html = styled_html.replace('<td>', '<td style="border: none;">') 
+                combined_result.append(f'<div style="display: flex; justify-content: center;">{styled_html}</div>')
             else:
                 combined_result.append(item)
 
@@ -684,7 +694,6 @@ def message_func(text, is_user=False):
                 """,
             unsafe_allow_html=True,
         )
-
             
 def update_exported_shortcuts():
     for exported_shortcut in st.session_state.get('exported_shortcuts', []):
