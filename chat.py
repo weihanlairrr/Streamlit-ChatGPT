@@ -631,7 +631,7 @@ def message_func(text, is_user=False):
         st.markdown(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 10px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 10px; font-size: 15px; max-width: 100%; word-wrap: break-word; word-break: break-all;">
                         {text_with_line_breaks} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
@@ -673,7 +673,7 @@ def message_func(text, is_user=False):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 100%; word-wrap: break-word; word-break: break-all;">
                         {formatted_message} \n </div>
                 </div>
                 """,
