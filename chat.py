@@ -533,10 +533,9 @@ async def handle_prompt_submission(prompt):
         chat_history_perplexity[st.session_state['model_type']] = st.session_state["messages_Perplexity"]
         save_chat_history(chat_history_perplexity, 'Perplexity')
 
-        # 比較狀態變化，只有在狀態變化時才進行重繪
         if prev_state != st.session_state["messages_Perplexity"]:
             st.session_state['prev_state'] = {'messages_Perplexity': st.session_state["messages_Perplexity"].copy()}
-            st.experimental_rerun()
+            st.rerun()
 
 def update_slider(key, value):
     st.session_state[key] = value
@@ -555,7 +554,7 @@ def confirm_reset_chat():
     with confirm:
         if st.button("確認", key="confirm_reset"):
             reset_chat()
-            st.experimental_rerun()
+            st.rerun()
     with cancel:
         if st.button("取消", key="cancel_reset", on_click=cancel_reset_chat):
             pass
@@ -1369,7 +1368,7 @@ if selected == "提示詞":
         if len(st.session_state['shortcuts']) >= 8:
             st.markdown("<div class='custom-warning'>已達到 Shortcut 數量上限（8 個）</div>", unsafe_allow_html=True)
             time.sleep(1)
-            st.experimental_rerun()
+            st.rerun()
         else:
             existing_names = [shortcut['name'] for shortcut in st.session_state['shortcuts']]
             base_name = f"Shortcut {len(st.session_state['shortcuts']) + 1}"
@@ -1414,7 +1413,7 @@ if selected == "提示詞":
                 if st.button("確認", key=f"confirm_delete_{st.session_state['current_shortcut']}_confirm"):
                     delete_shortcut(index)
                     st.session_state['delete_confirmation'] = None
-                    st.experimental_rerun()
+                    st.rerun()
             with cancel:
                 if st.button("取消", key=f"cancel_delete_{st.session_state['current_shortcut']}_cancel", on_click=cancel_delete_shortcut):
                     pass
@@ -1472,11 +1471,11 @@ if selected == "提示詞":
                                 save_shortcuts()
                                 st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
                                 time.sleep(1)
-                                st.experimental_rerun()
+                                st.rerun()
                             else:
                                 st.markdown("<div class='custom-warning'>標籤為必填項目</div>", unsafe_allow_html=True)
                                 time.sleep(1)
-                                st.experimental_rerun()
+                                st.rerun()
 
                 elif component_type == "選單":
                     with st.expander("建立選單變數", expanded=True):
@@ -1492,11 +1491,11 @@ if selected == "提示詞":
                                 save_shortcuts()
                                 st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
                                 time.sleep(1)
-                                st.experimental_rerun()
+                                st.rerun()
                             else:
                                 st.markdown("<div class='custom-warning'>標籤和選項為必填項目</div>", unsafe_allow_html=True)
                                 time.sleep(1)
-                                st.experimental_rerun()
+                                st.rerun()
 
                 elif component_type == "多選選單":
                     with st.expander("建立多選選單變數", expanded=True):
@@ -1512,7 +1511,7 @@ if selected == "提示詞":
                                 save_shortcuts()
                                 st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
                                 time.sleep(1)
-                                st.experimental_rerun()
+                                st.rerun()
 
                 st.divider()
                 st.subheader("你的元件組合")
@@ -1531,7 +1530,7 @@ if selected == "提示詞":
                             del shortcut['components'][i]
                             update_exported_shortcuts()
                             save_shortcuts()
-                            st.experimental_rerun()
+                            st.rerun()
 
                 st.divider()
                 st.subheader("自訂提示詞公式")
@@ -1571,7 +1570,7 @@ if selected == "提示詞":
                             st.markdown("<div class='custom-success'>成功輸出，請至對話頁查看</div>", unsafe_allow_html=True)
                             time.sleep(1)
                             st.session_state['exported_shortcuts'].append(shortcut['name'])
-                            st.experimental_rerun()
+                            st.rerun()
 
                 st.write("\n")
                 if len(st.session_state['shortcuts']) > 1:
