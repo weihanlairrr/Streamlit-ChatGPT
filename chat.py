@@ -274,8 +274,40 @@ def init_session_state():
 init_session_state()
 
 # 自訂樣式
-st.markdown("""
+st.markdown(
+    """
     <style>
+    .container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
+    }
+    .chat-container {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 10px; /* 添加 padding 確保內容不會緊貼邊緣 */
+        box-sizing: border-box;
+    }
+    .message-container {
+        background: #F1F1F1;
+        color: #2B2727;
+        border-radius: 15px;
+        padding: 10px 15px;
+        margin-right: 5px;
+        margin-left: 5px;
+        font-size: 15px;
+        max-width: 100%;
+        word-wrap: break-word;
+        word-break: break-all;
+        box-sizing: border-box; /* 確保 padding 不影響整體寬度 */
+    }
+    .st-chat-input {
+        width: 100%;
+        box-sizing: border-box;
+    }
     .stButton > button {
         padding: 5px 20px;
         background: linear-gradient(135deg, #58BBFF 30%, #3380FF 100%);
@@ -291,7 +323,12 @@ st.markdown("""
         background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
     }
     .stRadio > div {
-        display: flex; justify-content: center; padding: 5px 20px; border: none; border-radius: 5px; background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
+        display: flex; 
+        justify-content: center; 
+        padding: 5px 20px; 
+        border: none; 
+        border-radius: 5px; 
+        background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
     }
     p {
         margin: 0;
@@ -361,8 +398,29 @@ st.markdown("""
     .stCodeBlock button:hover svg {
         stroke: white !important;
     }
+    .stChatInputContainer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+        background-color: white;
+    }
+    .stChatMessage {
+        margin-bottom: 10px;
+        overflow-wrap: break-word;
+    }
+    .stChatMessageUser {
+        text-align: right;
+    }
+    .stChatMessageAssistant {
+        text-align: left;
+    }
     </style>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
+
 
 def select_avatar(name, image):
     if st.session_state['model_type'] == "ChatGPT":
@@ -428,7 +486,10 @@ async def handle_prompt_submission(prompt):
 
     elif st.session_state['model_type'] == "Perplexity":
         message_func(prompt, is_user=True)
-
+        
+        # 在更新狀態之前存儲當前狀態
+        prev_state = st.session_state.get('prev_state', {}).get('messages_Perplexity', []).copy()
+        
         thinking_placeholder = st.empty()
         status_text = "Thinking..."
         st.session_state["messages_Perplexity"].append({"role": "assistant", "content": status_text})
@@ -437,9 +498,8 @@ async def handle_prompt_submission(prompt):
 
         response_container = st.empty()
         full_response = ""
-
         history = st.session_state["messages_Perplexity"]
-        
+
         for response_message in generate_perplexity_response(
                 prompt,
                 history,
@@ -472,6 +532,11 @@ async def handle_prompt_submission(prompt):
         message_func(full_response, is_user=False)
         chat_history_perplexity[st.session_state['model_type']] = st.session_state["messages_Perplexity"]
         save_chat_history(chat_history_perplexity, 'Perplexity')
+
+        # 比較狀態變化，只有在狀態變化時才進行重繪
+        if prev_state != st.session_state["messages_Perplexity"]:
+            st.session_state['prev_state'] = {'messages_Perplexity': st.session_state["messages_Perplexity"].copy()}
+            st.experimental_rerun()
 
 def update_slider(key, value):
     st.session_state[key] = value
@@ -679,6 +744,45 @@ def message_func(text, is_user=False):
                 """,
             unsafe_allow_html=True,
         )
+
+st.markdown("""
+    <style>
+    .fixed-bottom {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: white;
+        padding: 10px;
+        border-top: 1px solid #ddd;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+    .text-input {
+        flex: 1;
+        padding: 10px;
+        margin-right: 10px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+    }
+    .btn {
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #f0f0f0;
+        border: 1px solid #ddd;
+        cursor: pointer;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
             
 def update_exported_shortcuts():
     for exported_shortcut in st.session_state.get('exported_shortcuts', []):
