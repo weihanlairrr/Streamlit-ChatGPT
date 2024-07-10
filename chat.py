@@ -398,24 +398,6 @@ st.markdown(
     .stCodeBlock button:hover svg {
         stroke: white !important;
     }
-    .stChatInputContainer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 9999;
-        background-color: white;
-    }
-    .stChatMessage {
-        margin-bottom: 10px;
-        overflow-wrap: break-word;
-    }
-    .stChatMessageUser {
-        text-align: right;
-    }
-    .stChatMessageAssistant {
-        text-align: left;
-    }
     </style>
     """,
     unsafe_allow_html=True
