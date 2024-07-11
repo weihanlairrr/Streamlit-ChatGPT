@@ -831,7 +831,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
             for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
                 col = st.columns(1)[0]
                 with col:
-                    if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#FBF1BC", "color": "#2b2727"}):
+                    if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#C4DDA7", "color": "#2b2727"}):
                         st.session_state['active_shortcut'] = shortcut
         
     if api_key_entered and 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
