@@ -399,6 +399,38 @@ with st.sidebar:
         .stCodeBlock button:hover svg {
             stroke: white !important;
         }
+        .fixed-bottom {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .text-input {
+            flex: 1;
+            padding: 10px;
+            margin-right: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .btn {
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         </style>
         """,
         unsafe_allow_html=True
@@ -726,44 +758,6 @@ def message_func(text, is_user=False):
                 """,
             unsafe_allow_html=True,
         )
-
-st.markdown("""
-    <style>
-    .fixed-bottom {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background-color: white;
-        padding: 10px;
-        border-top: 1px solid #ddd;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-    }
-    .text-input {
-        flex: 1;
-        padding: 10px;
-        margin-right: 10px;
-        border-radius: 5px;
-        border: 1px solid #ddd;
-    }
-    .btn {
-        padding: 10px;
-        border-radius: 5px;
-        background-color: #f0f0f0;
-        border: 1px solid #ddd;
-        cursor: pointer;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 
             
 def update_exported_shortcuts():
@@ -1158,7 +1152,6 @@ if selected == "模型設定":
                 "指定使用的語言",
                 key='language_input',
                 value=st.session_state.get('language', ''),
-                help="如要使用其他語言，請直接用中文輸入，例如：「英文」。",
                 on_change=update_language
             )
         with col3:
@@ -1167,20 +1160,18 @@ if selected == "模型設定":
                 key='max_tokens_input',
                 min_value=0,
                 value=st.session_state.get('max_tokens', 1000),
-                help="要生成的最大標記數量。",
                 on_change=update_max_tokens
             )
-        st.write("\n")
+      
         st.text_area(
             "角色設定",
             value=st.session_state.get('gpt_system_prompt', ''),
             placeholder="你是一個友好且資深的英文老師。你的目標是幫助使用者提高他們的語言能力，並且用簡單易懂的方式解釋概念。你應該耐心回答問題，並鼓勵學生提出更多問題。",
-            help="用於給模型提供初始指導。",
             key="gpt_system_prompt_input",
             on_change=update_gpt_system_prompt,
-            height=300
+            height=290
         )
-        st.write("\n")
+
         with st.expander("模型參數", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
@@ -1191,7 +1182,6 @@ if selected == "模型設定":
                     step=0.1,
                     value=st.session_state['temperature'],
                     key='temperature_slider',
-                    help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。一般建議只更改此參數或 Top P 中的一個，而不要同時更改。",
                     on_change=update_model_params,
                     args=("ChatGPT",)
                 )
@@ -1202,7 +1192,6 @@ if selected == "模型設定":
                     step=0.1,
                     value=st.session_state['presence_penalty'],
                     key='presence_penalty_slider',
-                    help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
                     on_change=update_model_params,
                     args=("ChatGPT",)
                 )
@@ -1214,7 +1203,6 @@ if selected == "模型設定":
                     step=0.1,
                     value=st.session_state['top_p'],
                     key='top_p_slider',
-                    help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
                     on_change=update_model_params,
                     args=("ChatGPT",)
                 )
@@ -1225,7 +1213,6 @@ if selected == "模型設定":
                     step=0.1,
                     value=st.session_state['frequency_penalty'],
                     key='frequency_penalty_slider',
-                    help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
                     on_change=update_model_params,
                     args=("ChatGPT",)
                 )
@@ -1253,7 +1240,6 @@ if selected == "模型設定":
                 "指定使用的語言",
                 key='language_input',
                 value=st.session_state.get('language', ''),
-                help="如要使用其他語言，請直接用中文輸入，例如：「英文」。",
                 on_change=update_language
             )
         with col3:
@@ -1262,20 +1248,17 @@ if selected == "模型設定":
                 key='max_tokens_input',
                 min_value=0,
                 value=st.session_state.get('max_tokens', 1000),
-                help="要生成的最大標記數量。",
                 on_change=update_max_tokens
             )
-        st.write("\n")
+  
         st.text_area(
             "角色設定",
             value=st.session_state.get('perplexity_system_prompt', ''),
             placeholder="你是一個專業的科技支援工程師。你的目標是幫助用戶解決各種技術問題，無論是硬體還是軟體問題。你應該詳細解釋解決方案，並確保用戶理解每一步驟。",
-            help="用於給模型提供初始指導。",
             key="perplexity_system_prompt_input",
             on_change=update_perplexity_system_prompt,
-            height=300
+            height=290
         )
-        st.write("\n")
         with st.expander("模型參數", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
@@ -1286,7 +1269,6 @@ if selected == "模型設定":
                     step=0.1,
                     value=st.session_state['perplexity_temperature'],
                     key='perplexity_temperature_slider',
-                    help="較高的值會使輸出更隨機，而較低的值則會使其更加集中和確定性。",
                     on_change=update_model_params,
                     args=("Perplexity",)
                 )
@@ -1298,7 +1280,6 @@ if selected == "模型設定":
                     step=0.1,
                     value=st.session_state['perplexity_top_p'],
                     key='perplexity_top_p_slider',
-                    help="基於核心機率的採樣，模型會考慮概率最高的top_p個標記的預測結果。當該參數為0.1時，代表只有包括前10%概率質量的標記將被考慮。一般建議只更改這個參數或 Temperature 中的一個，而不要同時更改。",
                     on_change=update_model_params,
                     args=("Perplexity",)
                 )
@@ -1310,7 +1291,6 @@ if selected == "模型設定":
                 step=0.1,
                 value=st.session_state['perplexity_presence_penalty'],
                 key='perplexity_presence_penalty_slider',
-                help="正值會根據新標記是否出現在當前生成的文本中對其進行懲罰，從而增加模型談論新話題的可能性。",
                 on_change=update_model_params,
                 args=("Perplexity",)
             )
