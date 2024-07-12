@@ -1084,7 +1084,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
     
             col1, col2 = st.columns(2)
             with col1:
-                if st.form_submit_button("隱藏", on_click=hide_expander):
+                if st.form_submit_button("取消", on_click=hide_expander):
                     st.session_state['active_shortcut'] = None
                     form_placeholder.empty()
     
