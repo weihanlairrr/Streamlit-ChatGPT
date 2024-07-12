@@ -1546,6 +1546,7 @@ if selected == "提示詞":
 
 # 頭像頁面
 elif selected == "頭像":
+    st.write("\n")
     st.markdown(f"""
         <div style='text-align: center;'>
             <div style='display: inline-block; border-radius: 60%; overflow: hidden; border: 0px; background: linear-gradient(-135deg, #35FAF9 0%, rgba(124, 45, 231, 0.8) 100%);'>
