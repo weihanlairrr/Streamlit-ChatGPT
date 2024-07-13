@@ -2,8 +2,10 @@ import streamlit as st
 import base64
 import pandas as pd
 import requests
+import asyncio
 import json
 import time
+import markdown2
 import re
 import os
 import html
@@ -11,11 +13,11 @@ import streamlit_shadcn_ui as ui
 
 from io import BytesIO
 from streamlit_option_menu import option_menu
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from PIL import Image
 
 
-def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
+async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
     try:
         if system_prompt:
             messages.insert(0, {"role": "system", "content": system_prompt})
@@ -24,7 +26,7 @@ def get_openai_response(client, model, messages, temperature, top_p, presence_pe
             prompt = messages[-1]['content'] + f" 請使用{st.session_state['language']}回答。你的回答不需要提到你會使用{st.session_state['language']}。"
             messages[-1]['content'] = prompt
 
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=temperature,
@@ -35,7 +37,7 @@ def get_openai_response(client, model, messages, temperature, top_p, presence_pe
             stream=True
         )
         streamed_text = ""
-        for chunk in response:
+        async for chunk in response:
             chunk_content = chunk.choices[0].delta.content
             if chunk_content is not None:
                 streamed_text += chunk_content
@@ -297,7 +299,7 @@ with st.sidebar:
             padding: 10px 15px;
             margin-right: 5px;
             margin-left: 5px;
-            font-size: 16px;
+            font-size: 15px;
             max-width: 100%;
             word-wrap: break-word;
             word-break: break-all;
@@ -370,7 +372,7 @@ with st.sidebar:
         }
         .message-container pre code {
             font-family: 'Source Code Pro', 'Courier New', monospace;
-            font-size: 16px;
+            font-size: 15px;
             line-height: 1.4;
             white-space: pre;
             color: #f1f1f1;
@@ -458,9 +460,9 @@ def display_avatars():
             st.image(f"data:image/png;base64,{image}", use_column_width=True)
             st.button("選擇", key=name, on_click=select_avatar, args=(name, image))
 
-def handle_prompt_submission(prompt):
+async def handle_prompt_submission(prompt):
     if st.session_state['model_type'] == "ChatGPT":
-        client = OpenAI(api_key=st.session_state['chatbot_api_key'])
+        client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
         message_func(prompt, is_user=True)
 
         thinking_placeholder = st.empty()
@@ -474,7 +476,7 @@ def handle_prompt_submission(prompt):
         
         messages = st.session_state["messages_ChatGPT"] + [{"role": "user", "content": prompt}]
         
-        for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
+        async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
             if status_text in [msg['content'] for msg in st.session_state["messages_ChatGPT"] if msg['role'] == 'assistant']:
                 st.session_state["messages_ChatGPT"] = [msg for msg in st.session_state["messages_ChatGPT"] if msg['content'] != status_text]
                 thinking_placeholder.empty()
@@ -484,7 +486,7 @@ def handle_prompt_submission(prompt):
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {full_response} \n </div>
                 </div>
                 """,
@@ -533,7 +535,7 @@ def handle_prompt_submission(prompt):
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {full_response} \n </div>
                 </div>
                 """,
@@ -656,7 +658,8 @@ def format_message(text):
         return f'<pre><code>{html.escape(code)}</code></pre>'
 
     text = code_pattern.sub(code_replacer, text)
-    html_content = re.sub(r'(<[^>]*)(?<!>)<', r'\1', text)
+    html_content = markdown2.markdown(text)
+    html_content = re.sub(r'(<[^>]*)(?<!>)<', r'\1', html_content)
 
     return html_content
 
@@ -707,7 +710,7 @@ def message_func(text, is_user=False):
         st.markdown(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 10px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 10px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {text_with_line_breaks} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
@@ -749,7 +752,7 @@ def message_func(text, is_user=False):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {formatted_message} \n </div>
                 </div>
                 """,
@@ -849,7 +852,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 prompt = st.chat_input()
                 if prompt:
                     st.session_state['chat_started'] = True
-                    client = OpenAI(api_key=st.session_state['chatbot_api_key'])
+                    client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
                     st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
                     message_func(prompt, is_user=True)
 
@@ -863,25 +866,28 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                     messages = st.session_state[f"messages_{st.session_state['model_type']}"] + [{"role": "user", "content": prompt}]
                     full_response = ""
 
-                    for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
-                        if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
-                            st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
-                            thinking_placeholder.empty()
+                    async def stream_openai_response():
+                        async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
+                            if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
+                                st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
+                                thinking_placeholder.empty()
 
-                        full_response = response_message
-                        response_container.markdown(f"""
-                            <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
-                                <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                                <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
-                                    {format_message(full_response)} \n </div>
-                            </div>
-                        """, unsafe_allow_html=True)
+                            full_response = response_message
+                            response_container.markdown(f"""
+                                <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
+                                    <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                                        {format_message(full_response)} \n </div>
+                                </div>
+                            """, unsafe_allow_html=True)
 
-                    st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": full_response})
-                    response_container.empty()
-                    message_func(full_response, is_user=False)
-                    chat_history_gpt[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
-                    save_chat_history(chat_history_gpt, 'ChatGPT')
+                        st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": full_response})
+                        response_container.empty()
+                        message_func(full_response, is_user=False)
+                        chat_history_gpt[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
+                        save_chat_history(chat_history_gpt, 'ChatGPT')
+
+                    asyncio.run(stream_openai_response())
 
             else:
                 prompt = st.text_input("輸入提示詞")
@@ -1044,7 +1050,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                         f"""
                         <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                             <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                            <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                            <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                                 {full_response} \n </div>
                         </div>
                         """,
@@ -1096,7 +1102,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 prompt = prompt_template.replace("{{", "{").replace("}}", "}")
                 st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
     
-                handle_prompt_submission(prompt)
+                asyncio.run(handle_prompt_submission(prompt))
     
                 st.session_state['prompt_submitted'] = True
             except KeyError as e:
