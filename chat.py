@@ -5,7 +5,6 @@ import requests
 import asyncio
 import json
 import time
-import markdown2
 import re
 import os
 import html
@@ -15,7 +14,6 @@ from io import BytesIO
 from streamlit_option_menu import option_menu
 from openai import AsyncOpenAI, OpenAI
 from PIL import Image
-
 
 async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
     try:
@@ -112,6 +110,7 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
         yield f"JSON Decode Error: {str(e)}"
     except Exception as e:
         yield f"Unexpected Error: {str(e)}"
+
 
 # 保存和載入設置的函數
 def save_settings(settings):
@@ -299,7 +298,7 @@ with st.sidebar:
             padding: 10px 15px;
             margin-right: 5px;
             margin-left: 5px;
-            font-size: 15px;
+            font-size: 16px;
             max-width: 100%;
             word-wrap: break-word;
             word-break: break-all;
@@ -332,9 +331,6 @@ with st.sidebar:
             background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
         }
         p {
-            margin: 0;
-        }
-        h1, h2, h3, h4, h5, h6 {
             margin: 0;
         }
         .message {
@@ -372,10 +368,14 @@ with st.sidebar:
         }
         .message-container pre code {
             font-family: 'Source Code Pro', 'Courier New', monospace;
-            font-size: 15px;
+            font-size: 16px;
             line-height: 1.4;
             white-space: pre;
             color: #f1f1f1;
+        }
+        .message-container h1, .message-container h2, .message-container h3, .message-container h4, .message-container h5, .message-container h6 {
+            margin-top: 0; 
+            margin-bottom: 0; /* 這裡將margin-bottom設為0 */
         }
         .message-container code:not(pre code) {
             background: #1E1E1E;
@@ -486,7 +486,7 @@ async def handle_prompt_submission(prompt):
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {full_response} \n </div>
                 </div>
                 """,
@@ -535,7 +535,7 @@ async def handle_prompt_submission(prompt):
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {full_response} \n </div>
                 </div>
                 """,
@@ -647,22 +647,6 @@ def update_max_tokens():
             'max_tokens': st.session_state['max_tokens']
         })
 
-def format_message(text):
-    if isinstance(text, (list, dict)):
-        return f"<pre><code>{json.dumps(text, indent=2)}</code></pre>"
-
-    code_pattern = re.compile(r'(```)(.*?)(```|$)', re.DOTALL)
-
-    def code_replacer(match):
-        code = match.group(2).strip()
-        return f'<pre><code>{html.escape(code)}</code></pre>'
-
-    text = code_pattern.sub(code_replacer, text)
-    html_content = markdown2.markdown(text)
-    html_content = re.sub(r'(<[^>]*)(?<!>)<', r'\1', html_content)
-
-    return html_content
-
 def parse_markdown_tables(markdown_text):
     lines = markdown_text.strip().split("\n")
     current_table = []
@@ -686,14 +670,84 @@ def parse_markdown_tables(markdown_text):
     for table in combined_result:
         if isinstance(table, list):
             if len(table) > 1:
-                df = pd.DataFrame(table[1:], columns=table[0])
-                dfs.append(df)
+                header = table[0]
+                rows = [row for row in table[1:] if len(row) == len(header)]
+                if rows:
+                    df = pd.DataFrame(rows, columns=header)
+                    dfs.append(df)
+                else:
+                    dfs.append(table[0])
             else:
                 dfs.append(table[0])
         else:
             dfs.append(table)
 
     return dfs
+
+def format_message(text):
+    if isinstance(text, (list, dict)):
+        return f"<pre><code>{json.dumps(text, indent=2)}</code></pre>"
+
+    # 處理代碼塊
+    code_pattern = re.compile(r'(```)(.*?)(```|$)', re.DOTALL)
+    code_blocks = {}
+    code_counter = 0
+
+    def code_replacer(match):
+        nonlocal code_counter
+        code_key = f"CODE_BLOCK_{code_counter}"
+        code_blocks[code_key] = match.group(0)
+        code_counter += 1
+        return code_key
+
+    text = code_pattern.sub(code_replacer, text)
+
+    # 將文本拆分成行，以便逐行處理
+    lines = text.split('\n')
+
+    # 處理標題符號
+    header_pattern = re.compile(r'^(#{1,6}) (.*)', re.MULTILINE)
+    lines = [header_pattern.sub(r'<h4>\2</h4>', line) for line in lines]
+
+    # 將處理後的行重新組合成文本
+    text = '\n'.join(lines)
+
+    # 處理粗體
+    bold_pattern = re.compile(r'\*\*(.*?)\*\*')
+    text = bold_pattern.sub(r'<b>\1</b>', text)
+
+    # 處理表格
+    tables = parse_markdown_tables(text)
+    combined_result = []
+
+    for table in tables:
+        if isinstance(table, pd.DataFrame):
+            table.index = table.index + 1
+            styled_item = table.style.set_table_styles(
+                [{'selector': 'thead th', 'props': [('background-color', '#333'), ('color', 'white')]},
+                 {'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#f2f2f2')]},
+                 {'selector': 'tbody tr:hover', 'props': [('background-color', '#ddd')]}]
+            ).set_properties(**{'text-align': 'left', 'font-family': 'Arial', 'font-size': '14px'})
+            styled_html = styled_item.to_html()
+            styled_html = styled_html.replace('border="1"', 'border="0"')
+            styled_html = styled_html.replace('<th>', '<th style="border: none;">')
+            styled_html = styled_html.replace('<td>', '<td style="border: none;">')
+            styled_html = styled_html.replace('<table ', '<table style="width: 100%;" ')
+            combined_result.append('<div style="height: 15px;"></div>')
+            combined_result.append(f'<div style="display: flex; justify-content: center;">{styled_html}</div>')
+        elif isinstance(table, list):
+            combined_result.append("<br>".join(map(str, table)))
+        else:
+            combined_result.append(table)
+
+    combined_text = "\n".join(combined_result)
+
+    # 替換回代碼塊
+    for code_key, code_block in code_blocks.items():
+        combined_text = combined_text.replace(code_key, code_block)
+
+    return combined_text
+
 
 def message_func(text, is_user=False):
     model_url = f"data:image/png;base64,{assistant_avatar}"
@@ -710,7 +764,7 @@ def message_func(text, is_user=False):
         st.markdown(
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
-                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 10px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 10px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {text_with_line_breaks} \n </div>
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
                 </div>
@@ -752,7 +806,7 @@ def message_func(text, is_user=False):
             f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
                     <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
-                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {formatted_message} \n </div>
                 </div>
                 """,
@@ -876,7 +930,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                             response_container.markdown(f"""
                                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                                     <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                                         {format_message(full_response)} \n </div>
                                 </div>
                             """, unsafe_allow_html=True)
@@ -1050,7 +1104,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                         f"""
                         <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                             <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                            <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 15px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                            <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                                 {full_response} \n </div>
                         </div>
                         """,
@@ -1411,6 +1465,7 @@ if selected == "提示詞":
                 st.session_state['current_shortcut'] = idx
                 shortcut = st.session_state['shortcuts'][idx]
 
+                # 初始化 session state 的 prompt_template
                 if f'prompt_template_{idx}' not in st.session_state:
                     st.session_state[f'prompt_template_{idx}'] = shortcut['prompt_template']
 
@@ -1424,11 +1479,10 @@ if selected == "提示詞":
 
                 if component_type == "文字輸入":
                     with st.expander("建立文字變數", expanded=True):
-                        label = st.text_input("變數名稱", value=st.session_state['new_component'].get('label', ''), key=f'text_input_label_{idx}')
+                        label = st.text_input("變數名稱", key=f'text_input_label_{idx}')
                         if st.button("新增 文字輸入", key=f'add_text_input_{idx}'):
                             if label:
                                 shortcut['components'].append({"type": "text input", "label": label})
-                                st.session_state['new_component']['label'] = ''
                                 reset_new_component()
                                 update_exported_shortcuts()
                                 save_shortcuts()
@@ -1442,13 +1496,11 @@ if selected == "提示詞":
 
                 elif component_type == "選單":
                     with st.expander("建立選單變數", expanded=True):
-                        label = st.text_input("變數名稱", value=st.session_state['new_component'].get('label', ''), key=f'selector_label_{idx}')
-                        options = st.text_area("輸入選項（每行一個）", value=st.session_state['new_component'].get('options', ''), key=f'selector_options_{idx}').split("\n")
+                        label = st.text_input("變數名稱", key=f'selector_label_{idx}')
+                        options = st.text_area("輸入選項（每行一個）", key=f'selector_options_{idx}').split("\n")
                         if st.button("新增 選單", key=f'add_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "selector", "label": label, "options": options})
-                                st.session_state['new_component']['label'] = ''
-                                st.session_state['new_component']['options'] = ''
                                 reset_new_component()
                                 update_exported_shortcuts()
                                 save_shortcuts()
@@ -1462,13 +1514,11 @@ if selected == "提示詞":
 
                 elif component_type == "多選選單":
                     with st.expander("建立多選選單變數", expanded=True):
-                        label = st.text_input("變數名稱", value=st.session_state['new_component'].get('label', ''), key=f'multi_selector_label_{idx}')
-                        options = st.text_area("輸入選項（每行一個）", value=st.session_state['new_component'].get('options', ''), key=f'multi_selector_options_{idx}').split("\n")
+                        label = st.text_input("變數名稱", key=f'multi_selector_label_{idx}')
+                        options = st.text_area("輸入選項（每行一個）", key=f'multi_selector_options_{idx}').split("\n")
                         if st.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "multi selector", "label": label, "options": options})
-                                st.session_state['new_component']['label'] = ''
-                                st.session_state['new_component']['options'] = ''
                                 reset_new_component()
                                 update_exported_shortcuts()
                                 save_shortcuts()
@@ -1500,7 +1550,7 @@ if selected == "提示詞":
                 st.write("\n")
                 col1, col2, col3 = st.columns([2, 0.1, 1.8])
                 with col1:
-                    st.text_area("", value=st.session_state[f'prompt_template_{idx}'], height=350, placeholder="用{ }代表標籤變數", key=f'prompt_template_{idx}', label_visibility="collapsed", on_change=update_prompt_template, args=(idx,))
+                    st.text_area("", height=350, placeholder="用{ }代表標籤變數", key=f'prompt_template_{idx}', label_visibility="collapsed", on_change=update_prompt_template, args=(idx,))
                 with col3:
                     st.write("##### 提示詞預覽")
                     inputs = {}
