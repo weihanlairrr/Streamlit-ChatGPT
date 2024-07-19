@@ -1,3 +1,4 @@
+
 import streamlit as st
 import base64
 import pandas as pd
@@ -352,6 +353,12 @@ with st.sidebar:
             margin: 10px 0;
             border: 1px solid #f5c6cb;
         }
+        .message-container h1, .message-container h2, .message-container h3, .message-container h4, .message-container h5, .message-container h6 {
+            margin-top: 1em; 
+        }
+        .message-container > :first-child h1, .message-container > :first-child h2, .message-container > :first-child h3, .message-container > :first-child h4, .message-container > :first-child h5, .message-container > :first-child h6 {
+            margin-top: 0;
+        }
         .message-container pre {
             background-color: #1E1E1E;
             border-radius: 5px;
@@ -475,7 +482,7 @@ async def handle_prompt_submission(prompt):
                 st.session_state["messages_ChatGPT"] = [msg for msg in st.session_state["messages_ChatGPT"] if msg['content'] != status_text]
                 thinking_placeholder.empty()
 
-            full_response += response_message
+            full_response = response_message
             response_container.markdown(
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
@@ -509,7 +516,7 @@ async def handle_prompt_submission(prompt):
         full_response = ""
         history = st.session_state["messages_Perplexity"]
 
-        async for response_message in generate_perplexity_response(
+        for response_message in generate_perplexity_response(
                 prompt,
                 history,
                 st.session_state['perplexity_model'],
@@ -524,7 +531,7 @@ async def handle_prompt_submission(prompt):
                 st.session_state["messages_Perplexity"] = [msg for msg in st.session_state["messages_Perplexity"] if msg['content'] != status_text]
                 thinking_placeholder.empty()
 
-            full_response += response_message
+            full_response = response_message
             response_container.markdown(
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
@@ -545,7 +552,6 @@ async def handle_prompt_submission(prompt):
         if prev_state != st.session_state["messages_Perplexity"]:
             st.session_state['prev_state'] = {'messages_Perplexity': st.session_state["messages_Perplexity"].copy()}
             st.rerun()
-
 
 def update_slider(key, value):
     st.session_state[key] = value
@@ -702,7 +708,7 @@ def format_message(text):
 
     # 處理標題符號
     header_pattern = re.compile(r'^(#{1,6}) (.*)', re.MULTILINE)
-    lines = [header_pattern.sub(r'<h>\2</h4>', line) for line in lines]
+    lines = [header_pattern.sub(r'<h4>\2</h4>', line) for line in lines]
 
     # 將處理後的行重新組合成文本
     text = '\n'.join(lines)
