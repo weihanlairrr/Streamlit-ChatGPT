@@ -288,7 +288,7 @@ with st.sidebar:
             width: 100%;
             max-width: 800px;
             margin: 0 auto;
-            padding: 0 10px; /* 添加 padding 確保內容不會緊貼邊緣 */
+            padding: 0 10px; 
             box-sizing: border-box;
         }
         .message-container {
@@ -302,7 +302,7 @@ with st.sidebar:
             max-width: 100%;
             word-wrap: break-word;
             word-break: break-all;
-            box-sizing: border-box; /* 確保 padding 不影響整體寬度 */
+            box-sizing: border-box; 
         }
         .st-chat-input {
             width: 100%;
@@ -375,7 +375,7 @@ with st.sidebar:
         }
         .message-container h1, .message-container h2, .message-container h3, .message-container h4, .message-container h5, .message-container h6 {
             margin-top: 0; 
-            margin-bottom: 0; /* 這裡將margin-bottom設為0 */
+            margin-bottom: 0;
         }
         .message-container code:not(pre code) {
             background: #1E1E1E;
