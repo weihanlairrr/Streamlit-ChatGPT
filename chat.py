@@ -1488,10 +1488,7 @@ if selected == "提示詞":
 
                 if component_type == "文字輸入":
                     with st.expander("建立文字變數", expanded=True):
-                        label_key = f'text_input_label_{idx}'
-                        if label_key not in st.session_state:
-                            st.session_state[label_key] = ""
-                        label = st.text_input("變數名稱", key=label_key)
+                        label = st.text_input("變數名稱", key=f'text_input_label_{idx}')
                         if st.button("新增 文字輸入", key=f'add_text_input_{idx}'):
                             if label:
                                 shortcut['components'].append({"type": "text input", "label": label})
@@ -1499,22 +1496,17 @@ if selected == "提示詞":
                                 update_exported_shortcuts()
                                 save_shortcuts()
                                 st.success("已成功新增")
-                                st.session_state[label_key] = ""  # 清空輸入的資料
-                                st.experimental_rerun()
+                                time.sleep(1)
+                                st.rerun()
                             else:
                                 st.warning("標籤為必填項目")
-                                st.experimental_rerun()
-                
+                                time.sleep(1)
+                                st.rerun()
+
                 elif component_type == "選單":
                     with st.expander("建立選單變數", expanded=True):
-                        label_key = f'selector_label_{idx}'
-                        options_key = f'selector_options_{idx}'
-                        if label_key not in st.session_state:
-                            st.session_state[label_key] = ""
-                        if options_key not in st.session_state:
-                            st.session_state[options_key] = ""
-                        label = st.text_input("變數名稱", key=label_key)
-                        options = st.text_area("輸入選項（每行一個）", key=options_key).split("\n")
+                        label = st.text_input("變數名稱", key=f'selector_label_{idx}')
+                        options = st.text_area("輸入選項（每行一個）", key=f'selector_options_{idx}').split("\n")
                         if st.button("新增 選單", key=f'add_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "selector", "label": label, "options": options})
@@ -1522,23 +1514,17 @@ if selected == "提示詞":
                                 update_exported_shortcuts()
                                 save_shortcuts()
                                 st.success("已成功新增")
-                                st.session_state[label_key] = ""  # 清空輸入的資料
-                                st.session_state[options_key] = ""  # 清空輸入的資料
-                                st.experimental_rerun()
+                                time.sleep(1)
+                                st.rerun()
                             else:
                                 st.warning("標籤和選項為必填項目")
-                                st.experimental_rerun()
-                
+                                time.sleep(1)
+                                st.rerun()
+
                 elif component_type == "多選選單":
                     with st.expander("建立多選選單變數", expanded=True):
-                        label_key = f'multi_selector_label_{idx}'
-                        options_key = f'multi_selector_options_{idx}'
-                        if label_key not in st.session_state:
-                            st.session_state[label_key] = ""
-                        if options_key not in st.session_state:
-                            st.session_state[options_key] = ""
-                        label = st.text_input("變數名稱", key=label_key)
-                        options = st.text_area("輸入選項（每行一個）", key=options_key).split("\n")
+                        label = st.text_input("變數名稱", key=f'multi_selector_label_{idx}')
+                        options = st.text_area("輸入選項（每行一個）", key=f'multi_selector_options_{idx}').split("\n")
                         if st.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "multi selector", "label": label, "options": options})
@@ -1546,9 +1532,8 @@ if selected == "提示詞":
                                 update_exported_shortcuts()
                                 save_shortcuts()
                                 st.success("已成功新增")
-                                st.session_state[label_key] = ""  # 清空輸入的資料
-                                st.session_state[options_key] = ""  # 清空輸入的資料
-                                st.experimental_rerun()
+                                time.sleep(1)
+                                st.rerun()
 
                 st.divider()
                 st.subheader("你的元件組合")
