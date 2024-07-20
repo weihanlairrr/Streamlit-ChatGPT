@@ -1422,7 +1422,7 @@ if selected == "提示詞":
                     del st.session_state[f'multi_selector_{index}_{i}']
     
             if len(st.session_state['shortcuts']) == 0:
-                add_shortcut()  # 在刪除最後一個 tab 後，添加預設的 shortcut tab
+                add_shortcut() 
     
             save_shortcuts()
             st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
