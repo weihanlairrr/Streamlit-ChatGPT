@@ -702,19 +702,21 @@ def format_message(text):
 
     text = code_pattern.sub(code_replacer, text)
 
-    # 將文本拆分成行，以便逐行處理
+    # 將文本拆分成行
     lines = text.split('\n')
 
-    # 處理標題符號
-    header_pattern = re.compile(r'^(#{1,6}) (.*)', re.MULTILINE)
-    lines = [header_pattern.sub(r'<h4>\2</h4>', line) for line in lines]
+    # 處理第一行
+    if lines and (lines[0].startswith('#') or lines[0].startswith('*')):
+        lines[0] = '\n' + lines[0]
+
+    # 處理粗體和標題符號（將#符號轉換成粗體並在其後添加一行空行）
+    bold_pattern = re.compile(r'\*\*(.*?)\*\*')
+    header_pattern = re.compile(r'^(#{1,6})\s*(.*)', re.MULTILINE)
+    lines = [header_pattern.sub(r'<b>\2</b>\n', line) for line in lines]
+    lines = [bold_pattern.sub(r'<b>\1</b>', line) for line in lines]
 
     # 將處理後的行重新組合成文本
     text = '\n'.join(lines)
-
-    # 處理粗體
-    bold_pattern = re.compile(r'\*\*(.*?)\*\*')
-    text = bold_pattern.sub(r'<b>\1</b>', text)
 
     # 處理表格
     tables = parse_markdown_tables(text)
@@ -745,6 +747,9 @@ def format_message(text):
     # 替換回代碼塊
     for code_key, code_block in code_blocks.items():
         combined_text = combined_text.replace(code_key, code_block)
+
+    # 保留換行符
+    combined_text = combined_text.replace('\n', '<br>')
 
     return combined_text
 
