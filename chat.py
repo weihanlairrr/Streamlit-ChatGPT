@@ -1601,7 +1601,6 @@ elif selected == "頭像":
     """, unsafe_allow_html=True)
     st.write("\n")
     st.write("\n")
-    st.write("\n")
     display_avatars()
 
     settings['user_avatar_chatgpt'] = st.session_state['user_avatar_chatgpt']
