@@ -273,169 +273,175 @@ def init_session_state():
 init_session_state()
 
 # 自訂樣式
-with st.sidebar:
-    st.markdown(
-        """
-        <style>
-        .container {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-sizing: border-box;
-        }
-        .chat-container {
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 0 10px; 
-            box-sizing: border-box;
-        }
-        .message-container {
-            background: #F1F1F1;
-            color: #2B2727;
-            border-radius: 15px;
-            padding: 10px 15px;
-            margin-right: 5px;
-            margin-left: 5px;
-            font-size: 16px;
-            max-width: 100%;
-            word-wrap: break-word;
-            word-break: break-all;
-            box-sizing: border-box; 
-        }
-        .st-chat-input {
-            width: 100%;
-            box-sizing: border-box;
-        }
-        .stButton > button {
-            padding: 5px 20px;
-            background: linear-gradient(135deg, #58BBFF 30%, #3380FF 100%);
-            color: #2B2727;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            cursor: pointer;
-            margin: 5px 0;
-            width: 100%;
-        }
-        .stButton > button:hover {
-            background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
-        }
-        .stRadio > div {
-            display: flex; 
-            justify-content: center; 
-            padding: 5px 20px; 
-            border: none; 
-            border-radius: 5px; 
-            background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
-        }
-        p {
-            margin: 0;
-        }
-        .message {
-            white-space: pre-wrap;
-        }
-        .custom-success {
-            background-color: #d4edda;
-            color: black;
-            border-radius: 5px;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #c3e6cb;
-        }
-        .custom-warning {
-            background-color: #f8d7da;
-            color: black;
-            border-radius: 5px;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #f5c6cb;
-        }
-        .message-container h1, .message-container h2, .message-container h3, .message-container h4, .message-container h5, .message-container h6 {
-            margin-top: 1em; 
-        }
-        .message-container > :first-child h1, .message-container > :first-child h2, .message-container > :first-child h3, .message-container > :first-child h4, .message-container > :first-child h5, .message-container > :first-child h6 {
-            margin-top: 0;
-        }
-        .message-container pre {
-            background-color: #1E1E1E;
-            border-radius: 5px;
-            padding: 10px;
-            overflow-x: auto;
-            margin: 10px 0;
-            white-space: pre;
-        }
-        .message-container pre code {
-            font-family: 'Source Code Pro', 'Courier New', monospace;
-            font-size: 16px;
-            line-height: 1.4;
-            white-space: pre;
-            color: #f1f1f1;
-        }
-        .message-container h1, .message-container h2, .message-container h3, .message-container h4, .message-container h5, .message-container h6 {
-            margin-top: 0; 
-            margin-bottom: 0;
-        }
-        .message-container code:not(pre code) {
-            background: #1E1E1E;
-            color: #f1f1f1;
-            font-size: 13px;
-            border-radius: 4px;
-            display: inline-flex; 
-            align-items: center; 
-            padding: 2px 4px;
-            margin: 2px 2px;
-        }
-        .stCodeBlock button {
-            color: white !important;
-        }
-        .stCodeBlock button svg {
-            stroke: white !important;
-        }
-        .stCodeBlock button:hover {
-            color: white !important;
-        }
-        .stCodeBlock button:hover svg {
-            stroke: white !important;
-        }
-        .fixed-bottom {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: white;
-            padding: 10px;
-            border-top: 1px solid #ddd;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        .text-input {
-            flex: 1;
-            padding: 10px;
-            margin-right: 10px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-        }
-        .btn {
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #f0f0f0;
-            border: 1px solid #ddd;
-            cursor: pointer;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
+st.markdown(
+    """
+    <style>
+    .container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
+    }
+    .chat-container {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 10px; 
+        box-sizing: border-box;
+    }
+    .message-container {
+        background: #F1F1F1;
+        color: #2B2727;
+        border-radius: 15px;
+        padding: 10px 15px;
+        margin-right: 5px;
+        margin-left: 5px;
+        font-size: 16px;
+        max-width: 100%;
+        word-wrap: break-word;
+        word-break: break-all;
+        box-sizing: border-box; 
+    }
+    .st-chat-input {
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .stButton > button {
+        padding: 5px 20px;
+        background: linear-gradient(135deg, #58BBFF 30%, #3380FF 100%);
+        color: #2B2727;
+        border: none;
+        border-radius: 5px;
+        font-size: 18px;
+        cursor: pointer;
+        margin: 5px 0;
+        width: 100%;
+    }
+    .stButton > button:hover {
+        background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
+    }
+    .stRadio > div {
+        display: flex; 
+        justify-content: center; 
+        padding: 5px 20px; 
+        border: none; 
+        border-radius: 5px; 
+        background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
+    }
+    p {
+        margin: 0 !important;
+    }
+    ul, ol {
+        padding-left: 10px !important;
+    }
+    .message {
+        white-space: pre-wrap !important;
+    }
+    .custom-success {
+        background-color: #d4edda !important;
+        color: black !important;
+        border-radius: 5px !important;
+        padding: 10px !important;
+        margin: 10px 0 !important;
+        border: 1px solid #c3e6cb !important;
+    }
+    .custom-warning {
+        background-color: #f8d7da !important;
+        color: black !important;
+        border-radius: 5px !important;
+        padding: 10px !important;
+        margin: 10px 0 !important;
+        border: 1px solid #f5c6cb !important;
+    }
+    .message-container pre {
+        background-color: #1E1E1E !important;
+        border-radius: 5px !important;
+        padding: 10px !important;
+        overflow-x: auto !important;
+        margin: 10px 0 !important;
+        white-space: pre !important;
+    }
+    .message-container pre code {
+        font-family: 'Source Code Pro', 'Courier New', monospace !important;
+        font-size: 16px !important;
+        line-height: 1.4 !important;
+        white-space: pre !important;
+        color: #f1f1f1 !important;
+    }
+    .message-container code:not(pre code) {
+        background: #1E1E1E !important;
+        color: #f1f1f1 !important;
+        font-size: 13px !important;
+        border-radius: 4px !important;
+        display: inline-flex !important; 
+        align-items: center !important; 
+        padding: 2px 4px !important;
+        margin: 2px 2px !important;
+    }
+    .stCodeBlock button {
+        color: white !important;
+    }
+    .stCodeBlock button svg {
+        stroke: white !important;
+    }
+    .stCodeBlock button:hover {
+        color: white !important;
+    }
+    .stCodeBlock button:hover svg {
+        stroke: white !important;
+    }
+    .fixed-bottom {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        background-color: white !important;
+        padding: 10px !important;
+        border-top: 1px solid #ddd !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        z-index: 9999 !important;
+    }
+    .text-input {
+        flex: 1 !important;
+        padding: 10px !important;
+        margin-right: 10px !important;
+        border-radius: 5px !important;
+        border: 1px solid #ddd !important;
+    }
+    .btn {
+        padding: 10px !important;
+        border-radius: 5px !important;
+        background-color: #f0f0f0 !important;
+        border: 1px solid #ddd !important;
+        cursor: pointer !important;
+        width: 40px !important;
+        height: 40px !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+    .message-container p:last-of-type {
+        margin-bottom: 0 !important;
+    }
+    .message-container p:not(:last-of-type) {
+        margin-bottom: 1em !important;
+    }
+    .message-container ul,
+    .message-container ol {
+        margin: 1em 0 !important;
+    }
+    .message-container ul:last-child,
+    .message-container ol:last-child {
+        margin-bottom: 0 !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+                                    
 
 def select_avatar(name, image):
     if st.session_state['model_type'] == "ChatGPT":
@@ -702,15 +708,14 @@ def format_message(text):
 
     text = code_pattern.sub(code_replacer, text)
 
-    # 將文本拆分成行，以便逐行處理
-    lines = text.split('\n')
+    # 處理標題
+    header_pattern = re.compile(r'^(#+)\s+(.*)', re.MULTILINE)
 
-    # 處理標題符號
-    header_pattern = re.compile(r'^(#{1,6}) (.*)', re.MULTILINE)
-    lines = [header_pattern.sub(r'<h4>\2</h4>', line) for line in lines]
+    def header_replacer(match):
+        content = match.group(2)
+        return f"<strong>{content}</strong>"
 
-    # 將處理後的行重新組合成文本
-    text = '\n'.join(lines)
+    text = header_pattern.sub(header_replacer, text)
 
     # 處理粗體
     bold_pattern = re.compile(r'\*\*(.*?)\*\*')
