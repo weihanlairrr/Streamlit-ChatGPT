@@ -305,20 +305,18 @@ with st.sidebar:
             box-sizing: border-box;
         }
         .message-container p {
-            margin: 1em 0 !important; /* 這裡設定對話框內段落的 margin */
+            margin: 1em 0 !important;
         }
-        .message-container p:last-of-type {
+        .message-container p:last-child {
             margin-bottom: 0 !important;
         }
-        .message-container p:not(:last-of-type) {
-            margin-bottom: 1em !important; /* 這裡可以根據需要設定適當的 margin */
+        .message-container p:not(:last-child) {
+            margin-bottom: 1em !important; 
         }
-        
         .st-chat-input {
             width: 100%;
             box-sizing: border-box;
         }
-        
         .stButton > button {
             padding: 5px 20px;
             background: linear-gradient(135deg, #58BBFF 30%, #3380FF 100%);
@@ -378,7 +376,6 @@ with st.sidebar:
         .stCodeBlock button {
             color: white !important;
         }
-        
         .stCodeBlock button svg {
             stroke: white !important;
         }
@@ -388,7 +385,6 @@ with st.sidebar:
         .stCodeBlock button:hover svg {
             stroke: white !important;
         }
-        
         .fixed-bottom {
             position: fixed !important;
             bottom: 0 !important;
@@ -421,17 +417,26 @@ with st.sidebar:
             justify-content: center !important;
             align-items: center !important;
         }   
-        .message-container p:last-of-type {
+        .message-container p {
+            margin: 1em 0 !important;
+        }
+        .message-container p:last-child {
             margin-bottom: 0 !important;
         }
-        .message-container p:not(:last-of-type) {
-            margin-bottom: 1em !important;
+        .message-container p + ul,
+        .message-container p + ol {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+        .message-container p + ul + p,
+        .message-container p + ol + p {
+            margin-top: 1em !important;
         }
         </style>
         """,
         unsafe_allow_html=True
     )
-                                        
+              
 
 def select_avatar(name, image):
     if st.session_state['model_type'] == "ChatGPT":
