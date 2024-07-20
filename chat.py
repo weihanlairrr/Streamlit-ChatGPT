@@ -1400,19 +1400,34 @@ if selected == "提示詞":
             save_shortcuts()
 
     def delete_shortcut(index):
-        if len(st.session_state['shortcuts']) > 1:
+        if len(st.session_state['shortcuts']) > 0:
             deleted_shortcut = st.session_state['shortcuts'].pop(index)
             st.session_state['shortcut_names'].pop(index)
             st.session_state['current_shortcut'] = max(0, index - 1)
             st.session_state['delete_confirmation'] = None
-
+    
             st.session_state['exported_shortcuts'] = [
                 shortcut for shortcut in st.session_state['exported_shortcuts']
                 if shortcut['name'] != deleted_shortcut['name']
             ]
-
+    
+            # 刪除相關的 session state
+            del st.session_state[f'prompt_template_{index}']
+            for i, component in enumerate(deleted_shortcut['components']):
+                if component['type'] == "text input":
+                    del st.session_state[f'text_input_{index}_{i}']
+                elif component['type'] == "selector":
+                    del st.session_state[f'selector_{index}_{i}']
+                elif component['type'] == "multi selector":
+                    del st.session_state[f'multi_selector_{index}_{i}']
+    
+            if len(st.session_state['shortcuts']) == 0:
+                add_shortcut()  # 在刪除最後一個 tab 後，添加預設的 shortcut tab
+    
             save_shortcuts()
             st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
+
+
 
     def cancel_delete_shortcut():
         st.session_state['delete_confirmation'] = None
@@ -1469,60 +1484,75 @@ if selected == "提示詞":
                 with col2:
                     new_name = st.text_input("提示詞名稱", value=shortcut['name'], key=f'shortcut_name_{idx}', on_change=update_shortcut_name, args=(idx,))
                     if new_name.strip() == "":
-                        st.markdown("<div class='custom-warning'>名稱不能為空</div>", unsafe_allow_html=True)
+                        st.warning("名稱不能為空")
 
                 if component_type == "文字輸入":
                     with st.expander("建立文字變數", expanded=True):
-                        label = st.text_input("變數名稱", key=f'text_input_label_{idx}')
+                        label_key = f'text_input_label_{idx}'
+                        if label_key not in st.session_state:
+                            st.session_state[label_key] = ""
+                        label = st.text_input("變數名稱", key=label_key)
                         if st.button("新增 文字輸入", key=f'add_text_input_{idx}'):
                             if label:
                                 shortcut['components'].append({"type": "text input", "label": label})
                                 reset_new_component()
                                 update_exported_shortcuts()
                                 save_shortcuts()
-                                st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
-                                time.sleep(1)
-                                st.rerun()
+                                st.success("已成功新增")
+                                st.session_state[label_key] = ""  # 清空輸入的資料
+                                st.experimental_rerun()
                             else:
-                                st.markdown("<div class='custom-warning'>標籤為必填項目</div>", unsafe_allow_html=True)
-                                time.sleep(1)
-                                st.rerun()
-
+                                st.warning("標籤為必填項目")
+                                st.experimental_rerun()
+                
                 elif component_type == "選單":
                     with st.expander("建立選單變數", expanded=True):
-                        label = st.text_input("變數名稱", key=f'selector_label_{idx}')
-                        options = st.text_area("輸入選項（每行一個）", key=f'selector_options_{idx}').split("\n")
+                        label_key = f'selector_label_{idx}'
+                        options_key = f'selector_options_{idx}'
+                        if label_key not in st.session_state:
+                            st.session_state[label_key] = ""
+                        if options_key not in st.session_state:
+                            st.session_state[options_key] = ""
+                        label = st.text_input("變數名稱", key=label_key)
+                        options = st.text_area("輸入選項（每行一個）", key=options_key).split("\n")
                         if st.button("新增 選單", key=f'add_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "selector", "label": label, "options": options})
                                 reset_new_component()
                                 update_exported_shortcuts()
                                 save_shortcuts()
-                                st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
-                                time.sleep(1)
-                                st.rerun()
+                                st.success("已成功新增")
+                                st.session_state[label_key] = ""  # 清空輸入的資料
+                                st.session_state[options_key] = ""  # 清空輸入的資料
+                                st.experimental_rerun()
                             else:
-                                st.markdown("<div class='custom-warning'>標籤和選項為必填項目</div>", unsafe_allow_html=True)
-                                time.sleep(1)
-                                st.rerun()
-
+                                st.warning("標籤和選項為必填項目")
+                                st.experimental_rerun()
+                
                 elif component_type == "多選選單":
                     with st.expander("建立多選選單變數", expanded=True):
-                        label = st.text_input("變數名稱", key=f'multi_selector_label_{idx}')
-                        options = st.text_area("輸入選項（每行一個）", key=f'multi_selector_options_{idx}').split("\n")
+                        label_key = f'multi_selector_label_{idx}'
+                        options_key = f'multi_selector_options_{idx}'
+                        if label_key not in st.session_state:
+                            st.session_state[label_key] = ""
+                        if options_key not in st.session_state:
+                            st.session_state[options_key] = ""
+                        label = st.text_input("變數名稱", key=label_key)
+                        options = st.text_area("輸入選項（每行一個）", key=options_key).split("\n")
                         if st.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "multi selector", "label": label, "options": options})
                                 reset_new_component()
                                 update_exported_shortcuts()
                                 save_shortcuts()
-                                st.markdown("<div class='custom-success'>已成功新增</div>", unsafe_allow_html=True)
-                                time.sleep(1)
-                                st.rerun()
+                                st.success("已成功新增")
+                                st.session_state[label_key] = ""  # 清空輸入的資料
+                                st.session_state[options_key] = ""  # 清空輸入的資料
+                                st.experimental_rerun()
 
                 st.divider()
                 st.subheader("你的元件組合")
-                st.write("\n")
+
                 cols = st.columns(4)
                 for i, component in enumerate(shortcut['components']):
                     col = cols[i % 4]
@@ -1563,7 +1593,7 @@ if selected == "提示詞":
                     try:
                         prompt = prompt_template.replace("{{", "{").replace("}}", "}")
                         prompt_with_line_breaks = prompt.replace("\n", "<br>")
-                        st.markdown(prompt_with_line_breaks.replace('\n', '  \n'), unsafe_allow_html=True)
+                        st.markdown(prompt_with_line_breaks.replace('\n','\n'), unsafe_allow_html=True)
                     except KeyError as e:
                         st.error(f"缺少必需的輸入: {e}")
                         
@@ -1574,13 +1604,13 @@ if selected == "提示詞":
                                 st.session_state['exported_shortcuts'] = []
                             st.session_state['exported_shortcuts'].append(shortcut)
                             save_shortcuts()
-                            st.markdown("<div class='custom-success'>成功輸出，請至對話頁查看</div>", unsafe_allow_html=True)
+                            st.success("成功輸出，請至對話頁查看")
                             time.sleep(1)
                             st.session_state['exported_shortcuts'].append(shortcut['name'])
                             st.rerun()
 
                 st.write("\n")
-                if len(st.session_state['shortcuts']) > 1:
+                if len(st.session_state['shortcuts']) > 0:
                     tab_name = shortcut['name']
                     if st.button(f"刪除 {tab_name}", key=f'delete_tab_{idx}'):
                         confirm_delete_shortcut(idx)
