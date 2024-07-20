@@ -339,12 +339,6 @@ with st.sidebar:
             border-radius: 5px;
             background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
         }
-        p {
-            margin: 0 !important;
-        }
-        ul, ol {
-            padding-left: 10px !important;
-        }
         .message {
             white-space: pre-wrap !important;
         }
