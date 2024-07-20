@@ -287,7 +287,7 @@ st.markdown(
         width: 100%;
         max-width: 800px;
         margin: 0 auto;
-        padding: 0 10px; 
+        padding: 0 10px;
         box-sizing: border-box;
     }
     .message-container {
@@ -301,12 +301,23 @@ st.markdown(
         max-width: 100%;
         word-wrap: break-word;
         word-break: break-all;
-        box-sizing: border-box; 
+        box-sizing: border-box;
     }
+    .message-container p {
+        margin: 1em 0 !important; /* 這裡設定對話框內段落的 margin */
+    }
+    .message-container p:last-of-type {
+        margin-bottom: 0 !important;
+    }
+    .message-container p:not(:last-of-type) {
+        margin-bottom: 1em !important; /* 這裡可以根據需要設定適當的 margin */
+    }
+    
     .st-chat-input {
         width: 100%;
         box-sizing: border-box;
     }
+    
     .stButton > button {
         padding: 5px 20px;
         background: linear-gradient(135deg, #58BBFF 30%, #3380FF 100%);
@@ -322,11 +333,11 @@ st.markdown(
         background: linear-gradient(135deg, rgba(0, 192, 251, 0.7) 30%, #30A2FD 100%);
     }
     .stRadio > div {
-        display: flex; 
-        justify-content: center; 
-        padding: 5px 20px; 
-        border: none; 
-        border-radius: 5px; 
+        display: flex;
+        justify-content: center;
+        padding: 5px 20px;
+        border: none;
+        border-radius: 5px;
         background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
     }
     p {
@@ -337,22 +348,6 @@ st.markdown(
     }
     .message {
         white-space: pre-wrap !important;
-    }
-    .custom-success {
-        background-color: #d4edda !important;
-        color: black !important;
-        border-radius: 5px !important;
-        padding: 10px !important;
-        margin: 10px 0 !important;
-        border: 1px solid #c3e6cb !important;
-    }
-    .custom-warning {
-        background-color: #f8d7da !important;
-        color: black !important;
-        border-radius: 5px !important;
-        padding: 10px !important;
-        margin: 10px 0 !important;
-        border: 1px solid #f5c6cb !important;
     }
     .message-container pre {
         background-color: #1E1E1E !important;
@@ -374,14 +369,15 @@ st.markdown(
         color: #f1f1f1 !important;
         font-size: 13px !important;
         border-radius: 4px !important;
-        display: inline-flex !important; 
-        align-items: center !important; 
+        display: inline-flex !important;
+        align-items: center !important;
         padding: 2px 4px !important;
         margin: 2px 2px !important;
     }
     .stCodeBlock button {
         color: white !important;
     }
+    
     .stCodeBlock button svg {
         stroke: white !important;
     }
@@ -391,6 +387,7 @@ st.markdown(
     .stCodeBlock button:hover svg {
         stroke: white !important;
     }
+    
     .fixed-bottom {
         position: fixed !important;
         bottom: 0 !important;
@@ -410,7 +407,7 @@ st.markdown(
         margin-right: 10px !important;
         border-radius: 5px !important;
         border: 1px solid #ddd !important;
-    }
+    }   
     .btn {
         padding: 10px !important;
         border-radius: 5px !important;
@@ -422,20 +419,12 @@ st.markdown(
         display: flex !important;
         justify-content: center !important;
         align-items: center !important;
-    }
+    }   
     .message-container p:last-of-type {
         margin-bottom: 0 !important;
     }
     .message-container p:not(:last-of-type) {
         margin-bottom: 1em !important;
-    }
-    .message-container ul,
-    .message-container ol {
-        margin: 1em 0 !important;
-    }
-    .message-container ul:last-child,
-    .message-container ol:last-child {
-        margin-bottom: 0 !important;
     }
     </style>
     """,
