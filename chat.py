@@ -204,7 +204,7 @@ def init_session_state():
     for key, default_value in [
         ('chatbot_api_key', settings.get('chatbot_api_key', '')),
         ('perplexity_api_key', settings.get('perplexity_api_key', '')),
-        ('open_ai_model', settings.get('open_ai_model', 'gpt-4o')),
+        ('open_ai_model', settings.get('open_ai_model', 'gpt-4o-mini')),
         ('perplexity_model', settings.get('perplexity_model', 'llama-3-sonar-large-32k-online')),
         ('perplexity_temperature', settings.get('perplexity_temperature', 0.5)),
         ('perplexity_top_p', settings.get('perplexity_top_p', 0.5)),
@@ -861,8 +861,8 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 with col:
                     if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#C4DDA7", "color": "#2b2727"}):
                         st.session_state['active_shortcut'] = shortcut
-        
-    if api_key_entered and 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
+
+    if 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
         with st.sidebar:
             st.divider()
             st.button("重置對話", on_click=lambda: st.session_state.update({'reset_confirmation': True}), use_container_width=True)
@@ -880,12 +880,183 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
             for msg in st.session_state[f"messages_{st.session_state['model_type']}"]:
                 message_func(msg["content"], is_user=(msg["role"] == "user"))
 
-        if st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']:
+        if st.session_state['model_type'] == "ChatGPT":
             if not st.session_state['open_ai_model'] == "DALL-E":
                 prompt = st.chat_input()
                 if prompt:
+                    if not st.session_state['chatbot_api_key']:
+                        message_func("請輸入您的 OpenAI API Key", is_user=False)
+                    else:
+                        st.session_state['chat_started'] = True
+                        client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
+                        st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
+                        message_func(prompt, is_user=True)
+
+                        thinking_placeholder = st.empty()
+                        status_text = "Thinking..."
+                        st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": status_text})
+                        with thinking_placeholder.container():
+                            message_func(status_text, is_user=False)
+
+                        response_container = st.empty()
+                        messages = st.session_state[f"messages_{st.session_state['model_type']}"] + [{"role": "user", "content": prompt}]
+                        full_response = ""
+
+                        async def stream_openai_response():
+                            async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
+                                if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
+                                    st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
+                                    thinking_placeholder.empty()
+
+                                full_response = response_message
+                                response_container.markdown(f"""
+                                    <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
+                                        <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                                        <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                                            {format_message(full_response)} \n </div>
+                                    </div>
+                                """, unsafe_allow_html=True)
+
+                            st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": full_response})
+                            response_container.empty()
+                            message_func(full_response, is_user=False)
+                            chat_history_gpt[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
+                            save_chat_history(chat_history_gpt, 'ChatGPT')
+
+                        asyncio.run(stream_openai_response())
+
+            else:
+                if st.session_state['chatbot_api_key']:
+                    prompt = st.text_input("輸入提示詞")
+                    negative_prompt = st.text_input("輸入不希望出現的內容（選填）")
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        model_choice = st.selectbox(
+                            "選擇 DALL-E 模型",
+                            ("DALL-E 3", "DALL-E 2"),
+                            index=0,
+                            placeholder="",
+                        )
+                        model_choice = "dall-e-3" if model_choice == "DALL-E 3" else "dall-e-2"
+
+                        color_preference_options = {
+                            "無特定偏好": "no specific color preference",
+                            "暖色調": "warm color scheme",
+                            "冷色調": "cool color scheme",
+                            "黑白": "black and white",
+                            "柔和色調": "soft color palette",
+                            "鮮豔色調": "vibrant color palette",
+                            "低飽和色調": "low saturation color scheme"
+                        }
+                        selected_color_preference_zh = st.selectbox("色彩偏好", list(color_preference_options.keys()))
+                        selected_color_preference_en = color_preference_options[selected_color_preference_zh]
+
+                    with col2:
+                        size_options = {
+                            "1024x1024": "1024x1024",
+                            "1792x1024": "1792x1024",
+                            "1024x1792": "1024x1792"
+                        }
+                        selected_size = st.selectbox("圖片尺寸", list(size_options.keys()))
+
+                        effect_options = {
+                            "無特定偏好": "no specific effect preference",
+                            "顆粒質感": "grainy texture",
+                            "玻璃質感": "glass-like effect",
+                            "紙質感": "paper texture",
+                            "金屬質感": "metallic sheen",
+                            "馬賽克效果": "mosaic pattern",
+                            "浮雕效果": "embossed effect",
+                            "陶瓷質感": "ceramic texture",
+                            "黏土質感": "clay texture", 
+                            "木頭質感": "wood texture",
+                            "磚塊質感": "brick texture"
+                        }
+                        selected_effect = st.selectbox("圖片效果", list(effect_options.keys()))
+                        selected_effect_en = effect_options[selected_effect]
+
+                    with col3:
+                        style_options = {
+                            "無特定偏好": "no specific style preference",
+                            "寫實風格": "realistic style",
+                            "卡通風格": "cartoon style",
+                            "水彩畫風格": "watercolor style",
+                            "油畫風格": "oil painting style",
+                            "素描風格": "sketch style",
+                            "像素藝術": "pixel art",
+                            "復古風格": "vintage style",
+                            "超現實主義": "surrealism",
+                            "極簡主義": "minimalism",
+                            "印象派": "impressionism",
+                            "抽象藝術": "abstract art",
+                            "3D渲染": "3D render",
+                            "普普藝術": "pop art",
+                            "哥德風格": "gothic style",
+                            "日式動漫": "anime style",
+                            "中國水墨畫": "Chinese ink painting",
+                            "拼貼藝術": "collage art",
+                            "立體主義": "cubism",
+                            "電影海報": "movie poster",
+                            "科幻插畫": "sci-fi illustration",
+                        }
+                        selected_style_zh = st.selectbox("圖片風格", list(style_options.keys()))
+                        selected_style_en = style_options[selected_style_zh]
+
+                        light_options = {
+                            "無特定偏好": "no specific lighting preference",
+                            "攝影棚燈光": "studio lighting",
+                            "自然光線": "natural lighting",
+                            "舞台燈光": "stage lighting",
+                            "背光效果": "backlit effect",
+                            "螢光效果": "neon lighting",
+                            "燭光氛圍": "candlelight ambiance"
+                        }
+                        selected_light_zh = st.selectbox("光線設定", list(light_options.keys()))
+                        selected_light_en = light_options[selected_light_zh]
+
+                    detail_level = st.slider("細節程度", 1, 10, 5)
+
+                    if st.button("生成圖片"):
+                        if not prompt.strip():
+                            warning_placeholder = st.empty()
+                            warning_placeholder.markdown("<div class='custom-warning'>請輸入提示詞</div>", unsafe_allow_html=True)
+                            time.sleep(2)
+                            warning_placeholder.empty()
+                        else:
+                            with st.spinner('圖片生成中...'):
+                                if selected_effect != "無特定效果":
+                                    full_prompt = f"{prompt}, with {selected_effect_en}, {selected_style_en} style, {selected_color_preference_en}, {selected_light_en}, with detail level {detail_level} out of 10"
+                                else:
+                                    full_prompt = f"{prompt}, {selected_style_en} style, {selected_color_preference_en}, {selected_light_en}, with detail level {detail_level} out of 10"
+
+                                if negative_prompt:
+                                    full_prompt += f". Avoid including: {negative_prompt}"
+
+                                client = OpenAI(api_key=st.session_state['chatbot_api_key'])
+
+                                try:
+                                    response = client.images.generate(
+                                        model=model_choice,
+                                        prompt=full_prompt,
+                                        size=selected_size,
+                                        n=1
+                                    )
+                                    image_url = response.data[0].url
+                                
+                                    response = requests.get(image_url)
+                                    img = Image.open(BytesIO(response.content))
+                                
+                                    st.image(img)
+                                except Exception as e:
+                                    st.error(f"圖片生成失敗：{str(e)}")
+
+        if st.session_state['model_type'] == "Perplexity":
+            prompt = st.chat_input()
+            if prompt:
+                if not st.session_state['perplexity_api_key']:
+                    message_func("請輸入您的 Perplexity API Key", is_user=False)
+                else:
                     st.session_state['chat_started'] = True
-                    client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
                     st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
                     message_func(prompt, is_user=True)
 
@@ -896,205 +1067,41 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                         message_func(status_text, is_user=False)
 
                     response_container = st.empty()
-                    messages = st.session_state[f"messages_{st.session_state['model_type']}"] + [{"role": "user", "content": prompt}]
                     full_response = ""
+                    history = st.session_state[f"messages_{st.session_state['model_type']}"]
 
-                    async def stream_openai_response():
-                        async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
-                            if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
-                                st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
-                                thinking_placeholder.empty()
+                    for response_message in generate_perplexity_response(
+                            prompt,
+                            history,
+                            st.session_state['perplexity_model'],
+                            st.session_state['temperature'],
+                            st.session_state['top_p'],
+                            st.session_state['presence_penalty'],
+                            st.session_state['max_tokens'],
+                            st.session_state['perplexity_system_prompt'],
+                            st.session_state['language']):
 
-                            full_response = response_message
-                            response_container.markdown(f"""
-                                <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
-                                    <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                                    <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
-                                        {format_message(full_response)} \n </div>
-                                </div>
-                            """, unsafe_allow_html=True)
+                        if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
+                            st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
+                            thinking_placeholder.empty()
 
-                        st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": full_response})
-                        response_container.empty()
-                        message_func(full_response, is_user=False)
-                        chat_history_gpt[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
-                        save_chat_history(chat_history_gpt, 'ChatGPT')
+                        full_response = response_message
+                        response_container.markdown(
+                            f"""
+                            <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
+                                <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                                <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                                    {full_response} \n </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
 
-                    asyncio.run(stream_openai_response())
-
-            else:
-                prompt = st.text_input("輸入提示詞")
-                negative_prompt = st.text_input("輸入不希望出現的內容（選填）")
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    model_choice = st.selectbox(
-                        "選擇 DALL-E 模型",
-                        ("DALL-E 3", "DALL-E 2"),
-                        index=0,
-                        placeholder="",
-                    )
-                    model_choice = "dall-e-3" if model_choice == "DALL-E 3" else "dall-e-2"
-
-                    color_preference_options = {
-                        "無特定偏好": "no specific color preference",
-                        "暖色調": "warm color scheme",
-                        "冷色調": "cool color scheme",
-                        "黑白": "black and white",
-                        "柔和色調": "soft color palette",
-                        "鮮豔色調": "vibrant color palette",
-                        "低飽和色調": "low saturation color scheme"
-                    }
-                    selected_color_preference_zh = st.selectbox("色彩偏好", list(color_preference_options.keys()))
-                    selected_color_preference_en = color_preference_options[selected_color_preference_zh]
-
-                with col2:
-                    size_options = {
-                        "1024x1024": "1024x1024",
-                        "1792x1024": "1792x1024",
-                        "1024x1792": "1024x1792"
-                    }
-                    selected_size = st.selectbox("圖片尺寸", list(size_options.keys()))
-
-                    effect_options = {
-                        "無特定偏好": "no specific effect preference",
-                        "顆粒質感": "grainy texture",
-                        "玻璃質感": "glass-like effect",
-                        "紙質感": "paper texture",
-                        "金屬質感": "metallic sheen",
-                        "馬賽克效果": "mosaic pattern",
-                        "浮雕效果": "embossed effect",
-                        "陶瓷質感": "ceramic texture",
-                        "黏土質感": "clay texture", 
-                        "木頭質感": "wood texture",
-                        "磚塊質感": "brick texture"
-                    }
-                    selected_effect = st.selectbox("圖片效果", list(effect_options.keys()))
-                    selected_effect_en = effect_options[selected_effect]
-
-                with col3:
-                    style_options = {
-                        "無特定偏好": "no specific style preference",
-                        "寫實風格": "realistic style",
-                        "卡通風格": "cartoon style",
-                        "水彩畫風格": "watercolor style",
-                        "油畫風格": "oil painting style",
-                        "素描風格": "sketch style",
-                        "像素藝術": "pixel art",
-                        "復古風格": "vintage style",
-                        "超現實主義": "surrealism",
-                        "極簡主義": "minimalism",
-                        "印象派": "impressionism",
-                        "抽象藝術": "abstract art",
-                        "3D渲染": "3D render",
-                        "普普藝術": "pop art",
-                        "哥德風格": "gothic style",
-                        "日式動漫": "anime style",
-                        "中國水墨畫": "Chinese ink painting",
-                        "拼貼藝術": "collage art",
-                        "立體主義": "cubism",
-                        "電影海報": "movie poster",
-                        "科幻插畫": "sci-fi illustration",
-                    }
-                    selected_style_zh = st.selectbox("圖片風格", list(style_options.keys()))
-                    selected_style_en = style_options[selected_style_zh]
-
-                    light_options = {
-                        "無特定偏好": "no specific lighting preference",
-                        "攝影棚燈光": "studio lighting",
-                        "自然光線": "natural lighting",
-                        "舞台燈光": "stage lighting",
-                        "背光效果": "backlit effect",
-                        "螢光效果": "neon lighting",
-                        "燭光氛圍": "candlelight ambiance"
-                    }
-                    selected_light_zh = st.selectbox("光線設定", list(light_options.keys()))
-                    selected_light_en = light_options[selected_light_zh]
-
-                detail_level = st.slider("細節程度", 1, 10, 5)
-
-                if st.button("生成圖片"):
-                    if not prompt.strip():
-                        warning_placeholder = st.empty()
-                        warning_placeholder.markdown("<div class='custom-warning'>請輸入提示詞</div>", unsafe_allow_html=True)
-                        time.sleep(2)
-                        warning_placeholder.empty()
-                    else:
-                        with st.spinner('圖片生成中...'):
-                            if selected_effect != "無特定效果":
-                                full_prompt = f"{prompt}, with {selected_effect_en}, {selected_style_en} style, {selected_color_preference_en}, {selected_light_en}, with detail level {detail_level} out of 10"
-                            else:
-                                full_prompt = f"{prompt}, {selected_style_en} style, {selected_color_preference_en}, {selected_light_en}, with detail level {detail_level} out of 10"
-
-                            if negative_prompt:
-                                full_prompt += f". Avoid including: {negative_prompt}"
-
-                            client = OpenAI(api_key=st.session_state['chatbot_api_key'])
-
-                            try:
-                                response = client.images.generate(
-                                    model=model_choice,
-                                    prompt=full_prompt,
-                                    size=selected_size,
-                                    n=1
-                                )
-                                image_url = response.data[0].url
-                            
-                                response = requests.get(image_url)
-                                img = Image.open(BytesIO(response.content))
-                            
-                                st.image(img)
-                            except Exception as e:
-                                st.error(f"圖片生成失敗：{str(e)}")
-
-        if st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key']:
-            prompt = st.chat_input()
-            if prompt:
-                st.session_state['chat_started'] = True
-                st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
-                message_func(prompt, is_user=True)
-
-                thinking_placeholder = st.empty()
-                status_text = "Thinking..."
-                st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": status_text})
-                with thinking_placeholder.container():
-                    message_func(status_text, is_user=False)
-
-                response_container = st.empty()
-                full_response = ""
-                history = st.session_state[f"messages_{st.session_state['model_type']}"]
-
-                for response_message in generate_perplexity_response(
-                        prompt,
-                        history,
-                        st.session_state['perplexity_model'],
-                        st.session_state['temperature'],
-                        st.session_state['top_p'],
-                        st.session_state['presence_penalty'],
-                        st.session_state['max_tokens'],
-                        st.session_state['perplexity_system_prompt'],
-                        st.session_state['language']):
-
-                    if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
-                        st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
-                        thinking_placeholder.empty()
-
-                    full_response = response_message
-                    response_container.markdown(
-                        f"""
-                        <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
-                            <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                            <div class="message-container" style="background: #F1F1F1; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
-                                {full_response} \n </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-
-                st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": full_response})
-                response_container.empty()
-                message_func(full_response, is_user=False)
-                chat_history_perplexity[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
-                save_chat_history(chat_history_perplexity, 'Perplexity')
+                    st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": full_response})
+                    response_container.empty()
+                    message_func(full_response, is_user=False)
+                    chat_history_perplexity[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
+                    save_chat_history(chat_history_perplexity, 'Perplexity')
 
     with st.sidebar:
         sidebar_placeholder = st.empty()
@@ -1143,6 +1150,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
 
     if 'prompt_submitted' in st.session_state:
         del st.session_state['prompt_submitted']
+
 
 def update_open_ai_model():
     model_display_names = {"GPT-4o": "gpt-4o", "GPT-4o mini": "gpt-4o-mini", "DALL-E": "DALL-E"}
