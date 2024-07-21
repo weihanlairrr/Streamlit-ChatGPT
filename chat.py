@@ -710,25 +710,28 @@ def update_perplexity_api_key():
         if not st.session_state['chat_started']:
             st.session_state["messages_Perplexity"][0]['content'] = "請問需要什麼協助？"
 
-def reset_chat():
-    if st.session_state['model_type'] == 'ChatGPT':
-        st.session_state['chat_started'] = False
-        st.session_state['messages_ChatGPT'] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}]
+def reset_chat(confirm_reset=None):
+    if confirm_reset is None:
+        st.session_state['reset_confirmation'] = True
     else:
-        st.session_state['chat_started'] = False
-        st.session_state['messages_Perplexity'] = [{"role": "assistant", "content": "請輸入您的 Perplexity API Key" if not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
-    
-    st.session_state['reset_confirmation'] = False
-    st.session_state['api_key_removed'] = False
-    st.session_state['reset_confirmed'] = True
-    st.session_state['reset_triggered'] = True
+        if confirm_reset:
+            if st.session_state['model_type'] == 'ChatGPT':
+                st.session_state['chat_started'] = False
+                st.session_state['messages_ChatGPT'] = [{"role": "assistant", "content": "請問需要什麼協助？" }]
+            else:
+                st.session_state['chat_started'] = False
+                st.session_state['messages_Perplexity'] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
+            
+            st.session_state['reset_confirmation'] = False
 
-    if st.session_state['model_type'] == 'ChatGPT':
-        if os.path.exists('chat_history_gpt.json'):
-            os.remove('chat_history_gpt.json')
-    else:
-        if os.path.exists('chat_history_perplexity.json'):
-            os.remove('chat_history_perplexity.json')
+            if st.session_state['model_type'] == 'ChatGPT':
+                if os.path.exists('chat_history_gpt.json'):
+                    os.remove('chat_history_gpt.json')
+            else:
+                if os.path.exists('chat_history_perplexity.json'):
+                    os.remove('chat_history_perplexity.json')
+        else:
+            st.session_state['reset_confirmation'] = False
 
 def cancel_reset_chat():
     st.session_state['reset_confirmation'] = False
@@ -833,9 +836,14 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
     if 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
         with st.sidebar:
             st.divider()
-            st.button("重置對話", on_click=lambda: st.session_state.update({'reset_confirmation': True}), use_container_width=True)
-            if st.session_state.get('reset_confirmation', False):
-                confirm_reset_chat()
+            if st.session_state.get('reset_confirmation'):
+                confirm_col, cancel_col = st.columns(2)
+                with confirm_col:
+                    st.button("確認", on_click=reset_chat, args=(True,))
+                with cancel_col:
+                    st.button("取消", on_click=reset_chat, args=(False,))
+            else:
+                st.button("重置對話", on_click=reset_chat)
 
     if selected == "對話":
         if st.session_state['reset_confirmed']:
@@ -1399,21 +1407,14 @@ def delete_shortcut(index):
 
 def confirm_delete_shortcut(index=None, confirm_delete=None):
     if confirm_delete is None:
-        if st.session_state.get('delete_confirmation') == index:
-            confirm, cancel = st.columns(2)
-            with confirm:
-                st.button("確認", key=f"confirm_delete_{st.session_state['current_shortcut']}_confirm", on_click=confirm_delete_shortcut, args=(index, True))
-            with cancel:
-                st.button("取消", key=f"cancel_delete_{st.session_state['current_shortcut']}_cancel", on_click=confirm_delete_shortcut, args=(None, False))
-        else:
-            st.session_state['delete_confirmation'] = index
+        st.session_state['delete_confirmation'] = index
     else:
         if confirm_delete:
             delete_shortcut(index)
             st.session_state['delete_confirmation'] = None
         else:
             st.session_state['delete_confirmation'] = None
-
+            
 def cancel_delete_shortcut():
     st.session_state['delete_confirmation'] = None
     
@@ -1567,12 +1568,16 @@ if selected == "提示詞":
 
                 if len(st.session_state['shortcuts']) > 0:
                     tab_name = shortcut['name']
-                    if st.button(f"刪除 {tab_name}", key=f'delete_tab_{idx}'):
-                        confirm_delete_shortcut(idx)
-
-                if st.session_state.get('delete_confirmation') is not None:
-                    confirm_delete_shortcut(st.session_state['delete_confirmation'])
-
+                    if st.session_state.get('delete_confirmation') == idx:
+                        confirm_col, cancel_col = st.columns(2)
+                        with confirm_col:
+                            st.button("確認刪除", key=f'confirm_delete_{idx}', on_click=confirm_delete_shortcut, args=(idx, True))
+                        with cancel_col:
+                            st.button("取消刪除", key=f'cancel_delete_{idx}', on_click=confirm_delete_shortcut, args=(None, False))
+                    else:
+                        if st.button(f"刪除 {tab_name}", key=f'delete_tab_{idx}', on_click=lambda: confirm_delete_shortcut(idx)):
+                            st.session_state['delete_confirmation'] = idx
+                    
 #%% 頭像頁面
 def select_avatar(name, image):
     if st.session_state['model_type'] == "ChatGPT":
