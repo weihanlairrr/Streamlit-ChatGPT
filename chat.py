@@ -487,6 +487,7 @@ async def handle_prompt_submission(prompt):
         message_func(full_response, is_user=False)
         chat_history_gpt[st.session_state['model_type']] = st.session_state["messages_ChatGPT"]
         save_chat_history(chat_history_gpt, 'ChatGPT')
+        st.session_state['prev_response'] = full_response 
 
     elif st.session_state['model_type'] == "Perplexity":
         message_func(prompt, is_user=True)
@@ -535,10 +536,10 @@ async def handle_prompt_submission(prompt):
         message_func(full_response, is_user=False)
         chat_history_perplexity[st.session_state['model_type']] = st.session_state["messages_Perplexity"]
         save_chat_history(chat_history_perplexity, 'Perplexity')
+        st.session_state['prev_response'] = full_response  
 
         if prev_state != st.session_state["messages_Perplexity"]:
             st.session_state['prev_state'] = {'messages_Perplexity': st.session_state["messages_Perplexity"].copy()}
-            st.rerun()
 
 def update_slider(key, value):
     st.session_state[key] = value
