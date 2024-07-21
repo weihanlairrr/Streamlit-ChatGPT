@@ -1403,13 +1403,12 @@ if selected == "提示詞":
             deleted_shortcut = st.session_state['shortcuts'].pop(index)
             st.session_state['shortcut_names'].pop(index)
             st.session_state['current_shortcut'] = max(0, index - 1)
-            st.session_state['delete_confirmation'] = None
-    
+        
             st.session_state['exported_shortcuts'] = [
                 shortcut for shortcut in st.session_state['exported_shortcuts']
                 if shortcut['name'] != deleted_shortcut['name']
             ]
-    
+        
             del st.session_state[f'prompt_template_{index}']
             for i, component in enumerate(deleted_shortcut['components']):
                 if component['type'] == "text input":
@@ -1418,29 +1417,32 @@ if selected == "提示詞":
                     del st.session_state[f'selector_{index}_{i}']
                 elif component['type'] == "multi selector":
                     del st.session_state[f'multi_selector_{index}_{i}']
-    
+        
             if len(st.session_state['shortcuts']) == 0:
                 add_shortcut() 
-    
+        
             save_shortcuts()
             st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
-
+            
     def cancel_delete_shortcut():
         st.session_state['delete_confirmation'] = None
 
-    def confirm_delete_shortcut(index):
-        if st.session_state.get('delete_confirmation') == index:
-            confirm, cancel = st.columns(2)
-            with confirm:
-                if st.button("確認", key=f"confirm_delete_{st.session_state['current_shortcut']}_confirm"):
-                    delete_shortcut(index)
-                    st.session_state['delete_confirmation'] = None
-                    st.rerun()
-            with cancel:
-                if st.button("取消", key=f"cancel_delete_{st.session_state['current_shortcut']}_cancel", on_click=cancel_delete_shortcut):
-                    pass
+    def confirm_delete_shortcut(index=None, confirm_delete=None):
+        if confirm_delete is None:
+            if st.session_state.get('delete_confirmation') == index:
+                confirm, cancel = st.columns(2)
+                with confirm:
+                    st.button("確認", key=f"confirm_delete_{st.session_state['current_shortcut']}_confirm", on_click=confirm_delete_shortcut, args=(index, True))
+                with cancel:
+                    st.button("取消", key=f"cancel_delete_{st.session_state['current_shortcut']}_cancel", on_click=confirm_delete_shortcut, args=(None, False))
+            else:
+                st.session_state['delete_confirmation'] = index
         else:
-            st.session_state['delete_confirmation'] = index
+            if confirm_delete:
+                delete_shortcut(index)
+                st.session_state['delete_confirmation'] = None
+            else:
+                st.session_state['delete_confirmation'] = None
 
     def update_prompt_template(idx):
         st.session_state['shortcuts'][idx]['prompt_template'] = st.session_state[f'prompt_template_{idx}']
