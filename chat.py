@@ -1571,9 +1571,9 @@ if selected == "提示詞":
                     if st.session_state.get('delete_confirmation') == idx:
                         confirm_col, cancel_col = st.columns(2)
                         with confirm_col:
-                            st.button("確認刪除", key=f'confirm_delete_{idx}', on_click=confirm_delete_shortcut, args=(idx, True))
+                            st.button("確認", key=f'confirm_delete_{idx}', on_click=confirm_delete_shortcut, args=(idx, True))
                         with cancel_col:
-                            st.button("取消刪除", key=f'cancel_delete_{idx}', on_click=confirm_delete_shortcut, args=(None, False))
+                            st.button("取消", key=f'cancel_delete_{idx}', on_click=confirm_delete_shortcut, args=(None, False))
                     else:
                         if st.button(f"刪除 {tab_name}", key=f'delete_tab_{idx}', on_click=lambda: confirm_delete_shortcut(idx)):
                             st.session_state['delete_confirmation'] = idx
