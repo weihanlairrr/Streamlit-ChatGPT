@@ -799,7 +799,6 @@ def message_func(text, is_user=False):
                 """,
             unsafe_allow_html=True,
         )
-
             
 def update_exported_shortcuts():
     for exported_shortcut in st.session_state.get('exported_shortcuts', []):
@@ -1418,8 +1417,6 @@ if selected == "提示詞":
     
             save_shortcuts()
             st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
-
-
 
     def cancel_delete_shortcut():
         st.session_state['delete_confirmation'] = None
