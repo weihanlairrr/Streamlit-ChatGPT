@@ -351,7 +351,7 @@ async def get_openai_response(client, model, messages, temperature, top_p, prese
             messages.insert(0, {"role": "system", "content": system_prompt})
 
         if st.session_state['language']:
-            prompt = messages[-1]['content'] + f" 請使用{st.session_state['language']}回答。你的回答不需要提到你會使用{st.session_state['language']}。"
+            prompt = messages[-1]['content'] + f" 請使用{st.session_state['language']}回答。"
             messages[-1]['content'] = prompt
 
         response = await client.chat.completions.create(
@@ -392,7 +392,7 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
         }
 
         if st.session_state['language']:
-            prompt = prompt + f" 請使用{st.session_state['language']}回答。你的回答不需要提到你會使用{st.session_state['language']}。"
+            prompt = prompt + f" 請使用{st.session_state['language']}回答。"
 
         context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history])
         full_prompt = f"{system_prompt}\n\n{context}\nuser: {prompt}"
