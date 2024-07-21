@@ -552,16 +552,19 @@ def update_slider(key, value):
 def cancel_reset_chat():
     st.session_state['reset_confirmation'] = False
 
-def confirm_reset_chat():
-    confirm, cancel = st.columns(2)
-    with confirm:
-        if st.button("確認", key="confirm_reset"):
+def confirm_reset_chat(confirm_reset=None):
+    if confirm_reset is None:
+        confirm, cancel = st.columns(2)
+        with confirm:
+            st.button("確認", key="confirm_reset", on_click=confirm_reset_chat, args=(True,))
+        with cancel:
+            st.button("取消", key="cancel_reset", on_click=confirm_reset_chat, args=(False,))
+    else:
+        st.session_state['reset_confirmed'] = confirm_reset
+        if st.session_state.get('reset_confirmed'):
             reset_chat()
-            st.rerun()
-    with cancel:
-        if st.button("取消", key="cancel_reset", on_click=cancel_reset_chat):
-            pass
-
+        st.session_state['reset_confirmation'] = False
+    
 def reset_chat():
     if st.session_state['model_type'] == 'ChatGPT':
         st.session_state['chat_started'] = False
@@ -650,6 +653,7 @@ def update_max_tokens():
         save_settings({
             'max_tokens': st.session_state['max_tokens']
         })
+
 
 def parse_markdown_tables(markdown_text):
     lines = markdown_text.strip().split("\n")
