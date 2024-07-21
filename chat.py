@@ -233,27 +233,21 @@ def init_session_state():
 
     if 'reset_triggered' in st.session_state and st.session_state['reset_triggered']:
         if st.session_state['model_type'] == 'ChatGPT':
-            st.session_state['messages_ChatGPT'] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}]
+            st.session_state['messages_ChatGPT'] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
         else:
-            st.session_state['messages_Perplexity'] = [{"role": "assistant", "content": "請輸入您的 Perplexity API Key" if not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
+            st.session_state['messages_Perplexity'] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
     
         st.session_state['reset_triggered'] = False  
     else:
         if "messages_ChatGPT" not in st.session_state:
             st.session_state["messages_ChatGPT"] = chat_history_gpt.get('ChatGPT', [])
             if not st.session_state["messages_ChatGPT"]:
-                if st.session_state['chatbot_api_key']:
-                    st.session_state["messages_ChatGPT"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
-                else:
-                    st.session_state["messages_ChatGPT"] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key"}]
+                st.session_state["messages_ChatGPT"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
     
         if "messages_Perplexity" not in st.session_state:
             st.session_state["messages_Perplexity"] = chat_history_perplexity.get('Perplexity', [])
             if not st.session_state["messages_Perplexity"]:
-                if st.session_state['perplexity_api_key']:
-                    st.session_state["messages_Perplexity"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
-                else:
-                    st.session_state["messages_Perplexity"] = [{"role": "assistant", "content": "請輸入您的 Perplexity API Key"}]
+                st.session_state["messages_Perplexity"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
     
     if 'reset_confirmed' not in st.session_state:
         st.session_state['reset_confirmed'] = False
@@ -270,6 +264,7 @@ def init_session_state():
         st.session_state['expander_state'] = True
 
 init_session_state()
+
 
 # 自訂樣式
 with st.sidebar:
@@ -839,12 +834,9 @@ with st.sidebar:
             settings['perplexity_api_key'] = perplexity_api_key_input
             save_settings(settings)
             if not st.session_state['chat_started']:
-                if perplexity_api_key_input:
-                    st.session_state["messages_Perplexity"][0]['content'] = "請問需要什麼協助？"
-                else:
-                    st.session_state["messages_Perplexity"][0]['content'] = "請輸入您的 Perplexity API Key"
+                st.session_state["messages_Perplexity"][0]['content'] = "請問需要什麼協助？"
             st.rerun()
-
+    
     else:
         assistant_avatar = assistant_avatar_gpt
         api_key_input = st.text_input("請輸入 OpenAI API Key", value=st.session_state.get('chatbot_api_key', ''), type="password")
@@ -853,8 +845,9 @@ with st.sidebar:
             settings['chatbot_api_key'] = api_key_input
             save_settings(settings)
             if not st.session_state['chat_started']:
-                st.session_state["messages_ChatGPT"][0]['content'] = "請問需要什麼協助？" if api_key_input else "請輸入您的 OpenAI API Key"
+                st.session_state["messages_ChatGPT"][0]['content'] = "請問需要什麼協助？"
             st.rerun()
+
 
 # 對話頁面
 if selected == "對話" and 'exported_shortcuts' in st.session_state:
