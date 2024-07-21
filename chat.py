@@ -156,17 +156,32 @@ def init_session_state():
     
     if 'reset_confirmed' not in st.session_state:
         st.session_state['reset_confirmed'] = False
-
-    if st.session_state['model_type'] == "ChatGPT":
-        st.session_state['user_avatar'] = st.session_state['user_avatar_chatgpt']
-    else:
-        st.session_state['user_avatar'] = st.session_state['user_avatar_perplexity']
-
+    
+    if 'shortcuts' not in st.session_state:
+        st.session_state['shortcuts'] = load_shortcuts()
+    
+    if 'current_shortcut' not in st.session_state:
+        st.session_state['current_shortcut'] = 0
+    
+    if 'new_component' not in st.session_state:
+        st.session_state['new_component'] = {"label": "", "options": ""}
+    
+    if 'shortcut_names' not in st.session_state:
+        st.session_state['shortcut_names'] = [shortcut["name"] for shortcut in st.session_state['shortcuts']]
+    
+    if 'exported_shortcuts' not in st.session_state: 
+        st.session_state['exported_shortcuts'] = []
+    
     if 'avatar_selected' not in st.session_state:
         st.session_state['avatar_selected'] = False
 
     if 'expander_state' not in st.session_state:
         st.session_state['expander_state'] = True
+
+    if st.session_state['model_type'] == "ChatGPT":
+        st.session_state['user_avatar'] = st.session_state['user_avatar_chatgpt']
+    else:
+        st.session_state['user_avatar'] = st.session_state['user_avatar_perplexity']
 
 init_session_state()
 
@@ -1419,17 +1434,6 @@ def update_shortcut_name(idx):
         st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
 
 if selected == "提示詞":
-    if 'shortcuts' not in st.session_state:
-        st.session_state['shortcuts'] = load_shortcuts()
-    if 'current_shortcut' not in st.session_state:
-        st.session_state['current_shortcut'] = 0
-    if 'new_component' not in st.session_state:
-        st.session_state['new_component'] = {"label": "", "options": ""}
-    if 'shortcut_names' not in st.session_state:
-        st.session_state['shortcut_names'] = [shortcut["name"] for shortcut in st.session_state['shortcuts']]
-    if 'exported_shortcuts' not in st.session_state:
-        st.session_state['exported_shortcuts'] = []
-
     with st.sidebar:
         st.divider()
         if st.button("新增提示詞"):
