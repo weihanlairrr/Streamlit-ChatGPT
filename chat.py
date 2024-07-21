@@ -225,20 +225,19 @@ def init_session_state():
         ('model_type', 'ChatGPT'),
         ('user_avatar_chatgpt', settings.get('user_avatar_chatgpt', user_avatar_default)),
         ('user_avatar_perplexity', settings.get('user_avatar_perplexity', user_avatar_default)),
-        ('prompt_submitted', False),  # 初始化 prompt_submitted 鍵
-        ('reset_triggered', False)  # 初始化 reset_triggered 鍵
+        ('prompt_submitted', False),  
+        ('reset_triggered', False)  
     ]:
         if key not in st.session_state:
             st.session_state[key] = default_value
 
     if 'reset_triggered' in st.session_state and st.session_state['reset_triggered']:
-        # 如果 reset_triggered 被設置為 True，說明剛剛觸發了重置操作
         if st.session_state['model_type'] == 'ChatGPT':
             st.session_state['messages_ChatGPT'] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if not st.session_state['chatbot_api_key'] else "請問需要什麼協助？"}]
         else:
             st.session_state['messages_Perplexity'] = [{"role": "assistant", "content": "請輸入您的 Perplexity API Key" if not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
     
-        st.session_state['reset_triggered'] = False  # 重置 reset_triggered 狀態
+        st.session_state['reset_triggered'] = False  
     else:
         if "messages_ChatGPT" not in st.session_state:
             st.session_state["messages_ChatGPT"] = chat_history_gpt.get('ChatGPT', [])
@@ -497,7 +496,6 @@ async def handle_prompt_submission(prompt):
     elif st.session_state['model_type'] == "Perplexity":
         message_func(prompt, is_user=True)
         
-        # 在更新狀態之前存儲當前狀態
         prev_state = st.session_state.get('prev_state', {}).get('messages_Perplexity', []).copy()
         
         thinking_placeholder = st.empty()
@@ -580,7 +578,7 @@ def reset_chat():
     st.session_state['reset_confirmation'] = False
     st.session_state['api_key_removed'] = False
     st.session_state['reset_confirmed'] = True
-    st.session_state['reset_triggered'] = True  # 設置 reset_triggered 為 True
+    st.session_state['reset_triggered'] = True
 
     if st.session_state['model_type'] == 'ChatGPT':
         if os.path.exists('chat_history_gpt.json'):
@@ -683,7 +681,6 @@ def format_message(text):
     if isinstance(text, (list, dict)):
         return f"<pre><code>{json.dumps(text, indent=2)}</code></pre>"
 
-    # 處理代碼塊
     code_pattern = re.compile(r'(```)(.*?)(```|$)', re.DOTALL)
     code_blocks = {}
     code_counter = 0
@@ -697,7 +694,6 @@ def format_message(text):
 
     text = code_pattern.sub(code_replacer, text)
 
-    # 處理標題
     header_pattern = re.compile(r'^(#+)\s+(.*)', re.MULTILINE)
 
     def header_replacer(match):
@@ -706,11 +702,9 @@ def format_message(text):
 
     text = header_pattern.sub(header_replacer, text)
 
-    # 處理粗體
     bold_pattern = re.compile(r'\*\*(.*?)\*\*')
     text = bold_pattern.sub(r'<b>\1</b>', text)
 
-    # 處理表格
     tables = parse_markdown_tables(text)
     combined_result = []
 
@@ -736,7 +730,6 @@ def format_message(text):
 
     combined_text = "\n".join(combined_result)
 
-    # 替換回代碼塊
     for code_key, code_block in code_blocks.items():
         combined_text = combined_text.replace(code_key, code_block)
 
@@ -1160,7 +1153,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
         del st.session_state['prompt_submitted']
 
 def update_open_ai_model():
-    model_display_names = {"GPT-4o": "gpt-4o", "GPT-3.5-Turbo": "gpt-3.5-turbo", "DALL-E": "DALL-E"}
+    model_display_names = {"GPT-4o": "gpt-4o", "GPT-4o mini": "gpt-4o-mini", "DALL-E": "DALL-E"}
     selected_model = model_display_names[st.session_state['open_ai_model_selection']]
     st.session_state['open_ai_model'] = selected_model
     settings['open_ai_model'] = selected_model
@@ -1169,11 +1162,11 @@ def update_open_ai_model():
 
 def update_perplexity_model():
     perplexity_model_display_names = {
-        "Sonar-Large-32k-Online": "llama-3-sonar-large-32k-online",
-        "Sonar-Large-32k-Chat": "llama-3-sonar-large-32k-chat",
-        "Llama-3-70b-Instruct": "llama-3-70b-instruct",
-        "Llama-3-8b-Instruct": "llama-3-8b-instruct",
-        "Mixtral-8x7b-Instruct": "mixtral-8x7b-instruct"
+        "Sonar-Large 32k Online": "llama-3-sonar-large-32k-online",
+        "Sonar-Large 32k Chat": "llama-3-sonar-large-32k-chat",
+        "Llama-3 70b Instruct": "llama-3-70b-instruct",
+        "Llama-3 8b Instruct": "llama-3-8b-instruct",
+        "Mixtral 8x7b Instruct": "mixtral-8x7b-instruct"
     }
     selected_model = perplexity_model_display_names[st.session_state['perplexity_model_selection']]
     st.session_state['perplexity_model'] = selected_model
@@ -1185,7 +1178,7 @@ if selected == "模型設定":
     col1, col2, col3 = st.columns([2, 2, 1.5])
     if st.session_state['model_type'] == "ChatGPT":
         with col1:
-            model_display_names = {"GPT-4o": "gpt-4o", "GPT-3.5-Turbo": "gpt-3.5-turbo", "DALL-E": "DALL-E"}
+            model_display_names = {"GPT-4o": "gpt-4o", "GPT-4o mini": "gpt-4o-mini", "DALL-E": "DALL-E"}
             reverse_mapping = {v: k for k, v in model_display_names.items()}
             selected_model_key = reverse_mapping.get(st.session_state['open_ai_model'], "GPT-4o")
             st.selectbox(
@@ -1268,11 +1261,11 @@ if selected == "模型設定":
     elif st.session_state['model_type'] == "Perplexity":
         with col1:
             perplexity_model_display_names = {
-                "Sonar-Large-32k-Online": "llama-3-sonar-large-32k-online",
-                "Sonar-Large-32k-Chat": "llama-3-sonar-large-32k-chat",
-                "Llama-3-70b-Instruct": "llama-3-70b-instruct",
-                "Llama-3-8b-Instruct": "llama-3-8b-instruct",
-                "Mixtral-8x7b-Instruct": "mixtral-8x7b-instruct"
+                "Sonar-Large 32k Online": "llama-3-sonar-large-32k-online",
+                "Sonar-Large 32k Chat": "llama-3-sonar-large-32k-chat",
+                "Llama-3 70b Instruct": "llama-3-70b-instruct",
+                "Llama-3 8b Instruct": "llama-3-8b-instruct",
+                "Mixtral 8x7b Instruct": "mixtral-8x7b-instruct"
             }
             reverse_mapping = {v: k for k, v in perplexity_model_display_names.items()}
             selected_model_key = reverse_mapping.get(st.session_state['perplexity_model'], "Sonar Large 32k Online")
@@ -1411,7 +1404,6 @@ if selected == "提示詞":
                 if shortcut['name'] != deleted_shortcut['name']
             ]
     
-            # 刪除相關的 session state
             del st.session_state[f'prompt_template_{index}']
             for i, component in enumerate(deleted_shortcut['components']):
                 if component['type'] == "text input":
@@ -1474,7 +1466,6 @@ if selected == "提示詞":
                 st.session_state['current_shortcut'] = idx
                 shortcut = st.session_state['shortcuts'][idx]
 
-                # 初始化 session state 的 prompt_template
                 if f'prompt_template_{idx}' not in st.session_state:
                     st.session_state[f'prompt_template_{idx}'] = shortcut['prompt_template']
 
