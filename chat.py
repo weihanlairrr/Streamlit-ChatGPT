@@ -777,7 +777,7 @@ def message_func(text, is_user=False):
                      {'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#f2f2f2')]},
                      {'selector': 'tbody tr:hover', 'props': [('background-color', '#ddd')]}]
                 ).set_properties(**{'text-align': 'left', 'font-family': 'Arial', 'font-size': '14px'})
-                combined_result.append('<div style="height: 15px;"></div>')  # 在每個表格上方增加較小的空行
+                combined_result.append('<div style="height: 15px;"></div>')  
                 styled_html = styled_item.to_html()
                 styled_html = styled_html.replace('border="1"', 'border="0"')  
                 styled_html = styled_html.replace('<th>', '<th style="border: none;">') 
