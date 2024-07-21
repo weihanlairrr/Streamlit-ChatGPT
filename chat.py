@@ -1553,6 +1553,7 @@ if selected == "提示詞":
                         st.markdown(prompt_with_line_breaks.replace('\n','\n'), unsafe_allow_html=True)
                     except KeyError as e:
                         st.error(f"缺少必需的輸入: {e}")
+                st.write("\n")
                 
                 if shortcut['components'] and st.session_state[f'prompt_template_{idx}'].strip():
                     if len(st.session_state.get('exported_shortcuts', [])) < 4 and shortcut['name'] not in [s['name'] for s in st.session_state.get('exported_shortcuts', [])]:
