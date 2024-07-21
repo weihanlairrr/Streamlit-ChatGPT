@@ -582,6 +582,22 @@ def reset_chat():
         if os.path.exists('chat_history_perplexity.json'):
             os.remove('chat_history_perplexity.json')
 
+def update_openai_api_key():
+    if st.session_state['openai_api_key_input'] != st.session_state['chatbot_api_key']:
+        st.session_state['chatbot_api_key'] = st.session_state['openai_api_key_input']
+        settings['chatbot_api_key'] = st.session_state['chatbot_api_key']
+        save_settings(settings)
+        if not st.session_state['chat_started']:
+            st.session_state["messages_ChatGPT"][0]['content'] = "請問需要什麼協助？"
+
+def update_perplexity_api_key():
+    if st.session_state['perplexity_api_key_input'] != st.session_state['perplexity_api_key']:
+        st.session_state['perplexity_api_key'] = st.session_state['perplexity_api_key_input']
+        settings['perplexity_api_key'] = st.session_state['perplexity_api_key']
+        save_settings(settings)
+        if not st.session_state['chat_started']:
+            st.session_state["messages_Perplexity"][0]['content'] = "請問需要什麼協助？"
+            
 def update_model_params(model_type):
     if model_type == "ChatGPT":
         st.session_state['temperature'] = st.session_state['temperature_slider']
@@ -828,25 +844,11 @@ with st.sidebar:
 
     if model_toggle == "Perplexity":
         assistant_avatar = assistant_avatar_perplexity
-        perplexity_api_key_input = st.text_input("請輸入 Perplexity API Key", value=st.session_state.get('perplexity_api_key', ''), type="password")
-        if perplexity_api_key_input != st.session_state['perplexity_api_key']:
-            st.session_state['perplexity_api_key'] = perplexity_api_key_input
-            settings['perplexity_api_key'] = perplexity_api_key_input
-            save_settings(settings)
-            if not st.session_state['chat_started']:
-                st.session_state["messages_Perplexity"][0]['content'] = "請問需要什麼協助？"
-            st.rerun()
+        perplexity_api_key_input = st.text_input("請輸入 Perplexity API Key", value=st.session_state.get('perplexity_api_key', ''), type="password", key='perplexity_api_key_input', on_change=update_perplexity_api_key)
     
     else:
         assistant_avatar = assistant_avatar_gpt
-        api_key_input = st.text_input("請輸入 OpenAI API Key", value=st.session_state.get('chatbot_api_key', ''), type="password")
-        if api_key_input != st.session_state['chatbot_api_key']:
-            st.session_state['chatbot_api_key'] = api_key_input
-            settings['chatbot_api_key'] = api_key_input
-            save_settings(settings)
-            if not st.session_state['chat_started']:
-                st.session_state["messages_ChatGPT"][0]['content'] = "請問需要什麼協助？"
-            st.rerun()
+        openai_api_key_input = st.text_input("請輸入 OpenAI API Key", value=st.session_state.get('chatbot_api_key', ''), type="password", key='openai_api_key_input', on_change=update_openai_api_key)
 
 
 # 對話頁面
