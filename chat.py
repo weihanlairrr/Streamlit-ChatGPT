@@ -758,8 +758,8 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     selected = option_menu("",
-        ["對話",'AI生圖','模型設定','提示詞','頭像'],
-        icons=['chat-dots-fill','palette-fill','gear-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
+        ["對話",'模型設定','AI生圖','提示詞','頭像'],
+        icons=['chat-dots-fill','gear-fill','palette-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
         styles={
             "container": {"padding": "0!important", "background": "linear-gradient(180deg, #e5e5e5 0%, #f5f5f5 80%)"},
             "icon": {"color": "#FF8C00", "font-size": "18px"},
