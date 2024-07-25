@@ -73,6 +73,7 @@ def update_and_save_setting(key, value):
 settings = load_settings()
 chat_history_gpt = load_chat_history('ChatGPT')
 chat_history_perplexity = load_chat_history('Perplexity')
+chat_history_dalle = load_chat_history('DALL-E')
 load_shortcuts()
 
 #%% 載入圖片
@@ -177,7 +178,6 @@ def init_session_state():
     if 'expander_state' not in st.session_state:
         st.session_state['expander_state'] = True
 
-chat_history_dalle = load_chat_history('DALL-E')
 init_session_state()
 
 #%% 自訂樣式
@@ -242,7 +242,7 @@ with st.sidebar:
         .stRadio > div {
             display: flex;
             justify-content: center;
-            padding: 5px 20px;
+            padding: 0px 0px 0px 18px;
             border: none;
             border-radius: 5px;
             background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
@@ -752,12 +752,12 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     selected = option_menu("",
-        ["對話",'模型設定','AI生圖','提示詞','頭像'],
-        icons=['chat-dots-fill','gear-fill','palette-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
+        ["對話",'AI生圖','模型設定','提示詞','頭像'],
+        icons=['chat-dots-fill','palette-fill','gear-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
         styles={
             "container": {"padding": "0!important", "background": "linear-gradient(180deg, #e5e5e5 0%, #f5f5f5 80%)"},
             "icon": {"color": "#FF8C00", "font-size": "18px"},
-            "nav-link": {"font-size": "18px", "text-align": "left", "margin":"3px", "--hover-color": "#eee"},
+            "nav-link": {"font-size": "18px", "text-align": "left", "margin":"4px", "--hover-color": "#eee"},
             "nav-link-selected": {"background": "linear-gradient(-135deg, #6DD0FA 0%, rgba(124, 45, 231, 0.8) 100%)", "color": "#F1f1f1"},
         }
     )
@@ -767,16 +767,16 @@ with st.sidebar:
         model_toggle = st.radio("", ["ChatGPT", "Perplexity"], key="model_type", horizontal=True, label_visibility="collapsed")
         st.write("\n")
     elif selected == "AI生圖":
-        model_toggle = st.radio("", ["DALL·E 3", "DALL·E 2"], key="dalle_model_display", horizontal=True, label_visibility="collapsed")
+        model_toggle = st.radio("", ["DALL ·E 3", "DALL ·E 2"], key="dalle_model_display", horizontal=True, label_visibility="collapsed")
         st.write("\n")
     
 
-    if selected in ["對話", "模型設定"]:
+    if selected =="對話":
         if st.session_state["model_type"] == "Perplexity":
             assistant_avatar = assistant_avatar_perplexity
             perplexity_api_key_input = st.text_input("請輸入 Perplexity API Key", value=st.session_state.get('perplexity_api_key', ''), type="password", key='perplexity_api_key_input', on_change=update_perplexity_api_key)
         
-        elif st.session_state["model_type"] in ["ChatGPT", "DALL·E 3", "DALL·E 2"]:
+        elif st.session_state["model_type"] in ["ChatGPT", "DALL ·E 3", "DALL ·E 2"]:
             assistant_avatar = assistant_avatar_gpt
             openai_api_key_input = st.text_input("請輸入 OpenAI API Key", value=st.session_state.get('chatbot_api_key', ''), type="password", key='openai_api_key_input', on_change=update_openai_api_key)
     
@@ -785,7 +785,7 @@ with st.sidebar:
         openai_api_key_input = st.text_input("請輸入 OpenAI API Key", value=st.session_state.get('chatbot_api_key', ''), type="password", key='openai_api_key_input', on_change=update_openai_api_key)
         
     if selected == "AI生圖":
-        dalle_model_map = {"DALL·E 3": "dall-e-3", "DALL·E 2": "dall-e-2"}
+        dalle_model_map = {"DALL ·E 3": "dall-e-3", "DALL ·E 2": "dall-e-2"}
         st.session_state["dalle_model"] = dalle_model_map[st.session_state["dalle_model_display"]]
 
 #%% 對話頁面
@@ -1469,7 +1469,6 @@ def update_shortcut_name(idx):
 
 if selected == "提示詞":
     with st.sidebar:
-        st.divider()
         if st.button("新增提示詞"):
             add_shortcut()
 
@@ -1540,27 +1539,25 @@ if selected == "提示詞":
                                 time.sleep(1)
                                 st.rerun()
 
-                st.divider()
-                st.subheader("你的元件組合")
-
-                cols = st.columns(4)
-                for i, component in enumerate(shortcut['components']):
-                    col = cols[i % 4]
-                    with col:
-                        if component['type'] == "text input":
-                            st.text_input(component['label'], key=f'text_input_{idx}_{i}')
-                        elif component['type'] == "selector":
-                            st.selectbox(component['label'], component['options'], key=f'selector_{idx}_{i}')
-                        elif component['type'] == "multi selector":
-                            st.multiselect(component['label'], component['options'], key=f'multi_selector_{idx}_{i}')
-                        if st.button("刪除", key=f'delete_{idx}_{i}'):
-                            del shortcut['components'][i]
-                            update_exported_shortcuts()
-                            save_shortcuts()
-                            st.rerun()
+                with st.expander("你的元件組合",expanded=True):
+                    cols = st.columns(4)
+                    for i, component in enumerate(shortcut['components']):
+                        col = cols[i % 4]
+                        with col:
+                            if component['type'] == "text input":
+                                st.text_input(component['label'], key=f'text_input_{idx}_{i}')
+                            elif component['type'] == "selector":
+                                st.selectbox(component['label'], component['options'], key=f'selector_{idx}_{i}')
+                            elif component['type'] == "multi selector":
+                                st.multiselect(component['label'], component['options'], key=f'multi_selector_{idx}_{i}')
+                            if st.button("刪除", key=f'delete_{idx}_{i}'):
+                                del shortcut['components'][i]
+                                update_exported_shortcuts()
+                                save_shortcuts()
+                                st.rerun()
 
                 st.divider()
-                st.subheader("自訂提示詞公式")
+                st.write("##### 自訂提示詞公式")
                 st.write("\n")
                 col1, col2, col3 = st.columns([2, 0.1, 1.8])
                 with col1:
