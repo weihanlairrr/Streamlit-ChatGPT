@@ -839,7 +839,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
     if api_key_entered and 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
         with st.sidebar.expander('你的提示詞'):
             for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
-                if shortcut['target'] == 'chat':  # 添加這一行以限制提示詞顯示在對話頁
+                if shortcut['target'] == 'chat':  
                     col = st.columns(1)[0]
                     with col:
                         if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#C4DDA7", "color": "#2b2727"}):
@@ -1539,7 +1539,7 @@ if selected == "提示詞":
                                 time.sleep(1)
                                 st.rerun()
 
-                with st.expander("你的元件組合",expanded=True):
+                with st.expander("你的元件組合",expanded=False):
                     cols = st.columns(4)
                     for i, component in enumerate(shortcut['components']):
                         col = cols[i % 4]
