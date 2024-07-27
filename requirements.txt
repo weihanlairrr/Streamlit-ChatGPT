@@ -6,7 +6,3 @@ openai
 asyncio
 streamlit_shadcn_ui
 Pillow
-streamlit_option_menu
-streamlit_extras
-concurrent.futures
-py-currency-converter
