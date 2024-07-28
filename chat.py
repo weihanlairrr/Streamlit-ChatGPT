@@ -756,7 +756,7 @@ with st.sidebar:
         icons=['chat-dots-fill','palette-fill','gear-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
         styles={
             "container": {"padding": "0!important", "background": "linear-gradient(180deg, #e5e5e5 0%, #f5f5f5 80%)"},
-            "icon": {"color": "#FF8C00", "font-size": "18px"},
+            "icon": {"padding": "0px 20px 0px 0px !important","color": "#FF8C00", "font-size": "18px"},
             "nav-link": {"font-size": "18px", "text-align": "left", "margin":"4px", "--hover-color": "#eee"},
             "nav-link-selected": {"background": "linear-gradient(-135deg, #6DD0FA 0%, rgba(124, 45, 231, 0.8) 100%)", "color": "#F1f1f1"},
         }
