@@ -110,7 +110,7 @@ def init_session_state():
         ('chatbot_api_key', settings.get('chatbot_api_key', '')),
         ('perplexity_api_key', settings.get('perplexity_api_key', '')),
         ('open_ai_model', settings.get('open_ai_model', 'gpt-4o-mini')),
-        ('perplexity_model', settings.get('perplexity_model', 'llama-3-sonar-large-32k-online')),
+        ('perplexity_model', settings.get('perplexity_model', 'llama-3.1-sonar-large-128k-online')),
         ('perplexity_temperature', settings.get('perplexity_temperature', 0.5)),
         ('perplexity_top_p', settings.get('perplexity_top_p', 0.5)),
         ('perplexity_presence_penalty', settings.get('perplexity_presence_penalty', 0.0)),
@@ -1003,11 +1003,8 @@ def update_open_ai_model():
 
 def update_perplexity_model():
     perplexity_model_display_names = {
-        "Sonar-Large 32k Online": "llama-3-sonar-large-32k-online",
-        "Sonar-Large 32k Chat": "llama-3-sonar-large-32k-chat",
-        "Llama-3 70b Instruct": "llama-3-70b-instruct",
-        "Llama-3 8b Instruct": "llama-3-8b-instruct",
-        "Mixtral 8x7b Instruct": "mixtral-8x7b-instruct"
+        "Sonar-Large 128k Online": "llama-3.1-sonar-large-128k-online",
+        "Sonar-Large 128k Chat": "llama-3.1-sonar-large-128k-chat",
     }
     selected_model = perplexity_model_display_names[st.session_state['perplexity_model_selection']]
     st.session_state['perplexity_model'] = selected_model
@@ -1147,14 +1144,11 @@ if selected == "模型設定":
     elif st.session_state['model_type'] == "Perplexity":
         with col1:
             perplexity_model_display_names = {
-                "Sonar-Large 32k Online": "llama-3-sonar-large-32k-online",
-                "Sonar-Large 32k Chat": "llama-3-sonar-large-32k-chat",
-                "Llama-3 70b Instruct": "llama-3-70b-instruct",
-                "Llama-3 8b Instruct": "llama-3-8b-instruct",
-                "Mixtral 8x7b Instruct": "mixtral-8x7b-instruct"
+                "Sonar-Large 128k Online": "llama-3.1-sonar-large-128k-online",
+                "Sonar-Large 128k Chat": "llama-3.1-sonar-large-128k-chat",
             }
             reverse_mapping = {v: k for k, v in perplexity_model_display_names.items()}
-            selected_model_key = reverse_mapping.get(st.session_state['perplexity_model'], "Sonar Large 32k Online")
+            selected_model_key = reverse_mapping.get(st.session_state['perplexity_model'], "Sonar-Large 128k Online")
             st.selectbox(
                 "選擇 Sonar 或 Llama3 模型",
                 list(perplexity_model_display_names.keys()),
@@ -1291,7 +1285,7 @@ if selected == "AI生圖":
         message_func(msg["content"], is_user=(msg["role"] == "user"))
 
     if 'exported_shortcuts' in st.session_state:
-        with st.sidebar.expander('你的提示詞'):
+        with st.sidebar.expander('你的提示詞',expanded=False):
             for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
                 if shortcut['target'] == 'image':  
                     col = st.columns(1)[0]
