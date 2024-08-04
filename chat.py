@@ -342,13 +342,13 @@ with st.sidebar:
 #%% 產生對話
 async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
     try:
-        # 在messages中插入system prompt
+        system_messages = []
         if system_prompt:
-            messages.insert(0, {"role": "system", "content": system_prompt})
-
+            system_messages.append({"role": "system", "content": system_prompt})
         if language:
-            prompt = messages[-1]['content'] + f" 請使用{language}回答。"
-            messages[-1]['content'] = prompt
+            system_messages.append({"role": "system", "content": f"請使用{language}回答。"})
+
+        messages = system_messages + messages
 
         response = await client.chat.completions.create(
             model=model,
@@ -528,7 +528,6 @@ async def handle_prompt_submission(prompt):
 
         if prev_state != st.session_state["messages_Perplexity"]:
             st.session_state['prev_state'] = {'messages_Perplexity': st.session_state["messages_Perplexity"].copy()}
-
 
 #%% 格式設定與轉換
 def format_message(text):
