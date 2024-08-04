@@ -148,7 +148,6 @@ def init_session_state():
             st.session_state["messages_ChatGPT"] = chat_history_gpt.get('ChatGPT', [])
             if not st.session_state["messages_ChatGPT"]:
                 st.session_state["messages_ChatGPT"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
-    
         if "messages_Perplexity" not in st.session_state:
             st.session_state["messages_Perplexity"] = chat_history_perplexity.get('Perplexity', [])
             if not st.session_state["messages_Perplexity"]:
@@ -156,25 +155,18 @@ def init_session_state():
     
     if 'reset_confirmed' not in st.session_state:
         st.session_state['reset_confirmed'] = False
-    
     if 'shortcuts' not in st.session_state:
         st.session_state['shortcuts'] = load_shortcuts()
-    
     if 'current_shortcut' not in st.session_state:
         st.session_state['current_shortcut'] = 0
-    
     if 'new_component' not in st.session_state:
-        st.session_state['new_component'] = {"label": "", "options": ""}
-    
+        st.session_state['new_component'] = {"label": "", "options": ""}   
     if 'shortcut_names' not in st.session_state:
-        st.session_state['shortcut_names'] = [shortcut["name"] for shortcut in st.session_state['shortcuts']]
-    
+        st.session_state['shortcut_names'] = [shortcut["name"] for shortcut in st.session_state['shortcuts']]   
     if 'exported_shortcuts' not in st.session_state: 
-        st.session_state['exported_shortcuts'] = []
-    
+        st.session_state['exported_shortcuts'] = []    
     if 'avatar_selected' not in st.session_state:
         st.session_state['avatar_selected'] = False
-
     if 'expander_state' not in st.session_state:
         st.session_state['expander_state'] = True
 
@@ -762,7 +754,6 @@ with st.sidebar:
         }
     )
     
-    # 根據選擇的頁面來顯示不同的模型選項
     if selected in ["對話", "模型設定"]:
         model_toggle = st.radio("", ["ChatGPT", "Perplexity"], key="model_type", horizontal=True, label_visibility="collapsed")
         st.write("\n")
