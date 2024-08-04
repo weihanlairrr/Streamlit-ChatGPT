@@ -1,3 +1,4 @@
+
 #%% 導入套件
 import streamlit as st
 import base64
@@ -342,13 +343,13 @@ with st.sidebar:
 #%% 產生對話
 async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
     try:
-        system_messages = []
+        # 在messages中插入system prompt
         if system_prompt:
-            system_messages.append({"role": "system", "content": system_prompt})
-        if language:
-            system_messages.append({"role": "system", "content": f"請使用{language}回答。"})
+            messages.insert(0, {"role": "system", "content": system_prompt})
 
-        messages = system_messages + messages
+        if language:
+            prompt = messages[-1]['content'] + f" 請使用{language}回答。"
+            messages[-1]['content'] = prompt
 
         response = await client.chat.completions.create(
             model=model,
@@ -528,6 +529,7 @@ async def handle_prompt_submission(prompt):
 
         if prev_state != st.session_state["messages_Perplexity"]:
             st.session_state['prev_state'] = {'messages_Perplexity': st.session_state["messages_Perplexity"].copy()}
+
 
 #%% 格式設定與轉換
 def format_message(text):
