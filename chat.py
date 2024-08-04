@@ -342,12 +342,14 @@ with st.sidebar:
 #%% 產生對話
 async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
     try:
+        # 在messages中插入system prompt和語言設定
+        system_messages = []
         if system_prompt:
-            messages.insert(0, {"role": "system", "content": system_prompt})
+            system_messages.append({"role": "system", "content": system_prompt})
+        if language:
+            system_messages.append({"role": "system", "content": f"請使用{language}回答。"})
 
-        if st.session_state['language']:
-            prompt = messages[-1]['content'] + f" 請使用{st.session_state['language']}回答。"
-            messages[-1]['content'] = prompt
+        messages = system_messages + messages
 
         response = await client.chat.completions.create(
             model=model,
@@ -386,16 +388,16 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
             "Authorization": f"Bearer {st.session_state['perplexity_api_key']}"
         }
 
-        if st.session_state['language']:
-            prompt = prompt + f" 請使用{st.session_state['language']}回答。"
+        system_messages = []
+        if system_prompt:
+            system_messages.append({"role": "system", "content": system_prompt})
+        if language:
+            system_messages.append({"role": "system", "content": f"請使用{language}回答。"})
 
         context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history])
-        full_prompt = f"{system_prompt}\n\n{context}\nuser: {prompt}"
+        full_prompt = f"{context}\nuser: {prompt}"
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": full_prompt}
-        ]
+        messages = system_messages + [{"role": "user", "content": full_prompt}]
 
         data = {
             "model": model,
@@ -449,7 +451,7 @@ async def handle_prompt_submission(prompt):
 
         response_container = st.empty()
         full_response = ""
-        
+
         messages = st.session_state["messages_ChatGPT"] + [{"role": "user", "content": prompt}]
         
         async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
@@ -478,9 +480,9 @@ async def handle_prompt_submission(prompt):
 
     elif st.session_state['model_type'] == "Perplexity":
         message_func(prompt, is_user=True)
-        
+
         prev_state = st.session_state.get('prev_state', {}).get('messages_Perplexity', []).copy()
-        
+
         thinking_placeholder = st.empty()
         status_text = "Thinking..."
         st.session_state["messages_Perplexity"].append({"role": "assistant", "content": status_text})
