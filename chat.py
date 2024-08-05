@@ -1,733 +1,1652 @@
+#%% 導入套件
 import streamlit as st
-import fitz  # PyMuPDF
-import os
-import shutil
-import zipfile
+import base64
 import pandas as pd
-import io
-import re
-import aiohttp
+import requests
 import asyncio
-import concurrent.futures
-import tiktoken
+import json
+import time
+import re
+import os
+import html
 import streamlit_shadcn_ui as ui
 
-from openai import OpenAI
-from google.cloud import vision
-from py_currency_converter import convert
-from streamlit_extras.stylable_container import stylable_container
+from io import BytesIO
 from streamlit_option_menu import option_menu
+from openai import AsyncOpenAI, OpenAI
 
-st.set_page_config(page_title=None, page_icon=None, layout="wide")
+#%% 保存和載入設置      
+def save_settings(settings):
+    with open('settings.json', 'w') as f:
+        json.dump(settings, f)
 
+def load_settings():
+    try:
+        with open('settings.json', 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+def save_chat_history(chat_history, model_type):
+    filename = 'chat_history_gpt.json' if model_type == 'ChatGPT' else 'chat_history_perplexity.json'
+    with open(filename, 'w') as f:
+        json.dump(chat_history, f)
+
+def load_chat_history(model_type):
+    filename = 'chat_history_gpt.json' if model_type == 'ChatGPT' else 'chat_history_perplexity.json'
+    try:
+        with open(filename, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+def save_shortcuts():
+    with open('shortcuts.json', 'w') as f:
+        json.dump({
+            'shortcuts': st.session_state['shortcuts'],
+            'exported_shortcuts': st.session_state.get('exported_shortcuts', [])
+        }, f)
+
+def load_shortcuts():
+    try:
+        with open('shortcuts.json', 'r') as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                st.session_state['shortcuts'] = data.get('shortcuts', [])
+                st.session_state['exported_shortcuts'] = data.get('exported_shortcuts', [])
+            else:
+                st.session_state['shortcuts'] = data
+                st.session_state['exported_shortcuts'] = []
+    except FileNotFoundError:
+        st.session_state['shortcuts'] = [{
+            "name": "Shortcut 1",
+            "components": [],
+            "prompt_template": ""
+        }]
+        st.session_state['exported_shortcuts'] = []
+
+def update_and_save_setting(key, value):
+    st.session_state[key] = value
+    settings[key] = value
+    save_settings(settings)
+    
+settings = load_settings()
+chat_history_gpt = load_chat_history('ChatGPT')
+chat_history_perplexity = load_chat_history('Perplexity')
+chat_history_dalle = load_chat_history('DALL-E')
+load_shortcuts()
+
+#%% 載入圖片
+def get_image_as_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode("utf-8")
+
+assistant_avatar_gpt = get_image_as_base64("Images/ChatGPT Logo.png")
+assistant_avatar_perplexity = get_image_as_base64("Images/Perplexity Logo.png")
+user_avatar_default = get_image_as_base64("Images/Cutie.png")
+logo_base64 = get_image_as_base64("Images/Bot Logo.png")
+
+avatars = {
+    "Cutie": get_image_as_base64("Images/Cutie.png"),
+    "Boy": get_image_as_base64("Images/Boy.png"),
+    "Penguin": get_image_as_base64("Images/Penguin.png"),
+    "Otter": get_image_as_base64("Images/Otter.png"),
+    "Bird": get_image_as_base64("Images/Bird.png"),
+    "White": get_image_as_base64("Images/White.png"),
+    "Bear": get_image_as_base64("Images/Bear.png"),
+    "Girl": get_image_as_base64("Images/Girl.png"),
+    "Baby Girl": get_image_as_base64("Images/Baby Girl.png"),
+    "Dog": get_image_as_base64("Images/Dog.png"),
+    "Chinese": get_image_as_base64("Images/Chinese.png"),
+    "Monkey": get_image_as_base64("Images/Monkey.png"),
+}
+
+#%% 初始化狀態變量
+def init_session_state():
+    if 'prompt_submitted' not in st.session_state:
+        st.session_state['prompt_submitted'] = False
+
+    for key, default_value in [
+        ('chatbot_api_key', settings.get('chatbot_api_key', '')),
+        ('perplexity_api_key', settings.get('perplexity_api_key', '')),
+        ('open_ai_model', settings.get('open_ai_model', 'gpt-4o-mini')),
+        ('perplexity_model', settings.get('perplexity_model', 'llama-3.1-sonar-large-128k-online')),
+        ('perplexity_temperature', settings.get('perplexity_temperature', 0.5)),
+        ('perplexity_top_p', settings.get('perplexity_top_p', 0.5)),
+        ('perplexity_presence_penalty', settings.get('perplexity_presence_penalty', 0.0)),
+        ('perplexity_max_tokens', settings.get('perplexity_max_tokens', 1000)),
+        ('perplexity_system_prompt', settings.get('perplexity_system_prompt', '')),
+        ('gpt_system_prompt', settings.get('gpt_system_prompt', '')),
+        ('language', settings.get('language', '繁體中文')),
+        ('temperature', settings.get('temperature', 0.5)),
+        ('top_p', settings.get('top_p', 0.5)),
+        ('presence_penalty', settings.get('presence_penalty', 0.0)),
+        ('frequency_penalty', settings.get('frequency_penalty', 0.0)),
+        ('max_tokens', settings.get('max_tokens', 1000)),
+        ('content', ''),
+        ('reset_confirmation', False),
+        ('chat_started', False),
+        ('api_key_removed', False),
+        ('model_type', 'ChatGPT'),
+        ('user_avatar', settings.get('user_avatar', user_avatar_default)),
+        ('prompt_submitted', False),
+        ('reset_triggered', False),
+        ('dalle_model', settings.get('dalle_model', 'dall-e-3'))
+    ]:
+        if key not in st.session_state:
+            st.session_state[key] = default_value
+
+    if 'reset_triggered' in st.session_state and st.session_state['reset_triggered']:
+        if st.session_state['model_type'] == 'ChatGPT':
+            st.session_state['messages_ChatGPT'] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
+        else:
+            st.session_state['messages_Perplexity'] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
+    
+        st.session_state['reset_triggered'] = False  
+    else:
+        if "messages_ChatGPT" not in st.session_state:
+            st.session_state["messages_ChatGPT"] = chat_history_gpt.get('ChatGPT', [])
+            if not st.session_state["messages_ChatGPT"]:
+                st.session_state["messages_ChatGPT"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
+        if "messages_Perplexity" not in st.session_state:
+            st.session_state["messages_Perplexity"] = chat_history_perplexity.get('Perplexity', [])
+            if not st.session_state["messages_Perplexity"]:
+                st.session_state["messages_Perplexity"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
+    
+    if 'reset_confirmed' not in st.session_state:
+        st.session_state['reset_confirmed'] = False
+    if 'shortcuts' not in st.session_state:
+        st.session_state['shortcuts'] = load_shortcuts()
+    if 'current_shortcut' not in st.session_state:
+        st.session_state['current_shortcut'] = 0
+    if 'new_component' not in st.session_state:
+        st.session_state['new_component'] = {"label": "", "options": ""}   
+    if 'shortcut_names' not in st.session_state:
+        st.session_state['shortcut_names'] = [shortcut["name"] for shortcut in st.session_state['shortcuts']]   
+    if 'exported_shortcuts' not in st.session_state: 
+        st.session_state['exported_shortcuts'] = []    
+    if 'avatar_selected' not in st.session_state:
+        st.session_state['avatar_selected'] = False
+    if 'expander_state' not in st.session_state:
+        st.session_state['expander_state'] = True
+
+init_session_state()
+
+#%% 自訂樣式
 with st.sidebar:
     st.markdown(
         """
         <style>
-        .stButton > button:hover {
-            background: linear-gradient(135deg, #707070 0%, #707070 100%);      
+        .container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
         }
-        .stDownloadButton button {
-            background-color: #46474A !important;
-            color: #f5f5f5 !important;
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        .message-container {
+            background: #F1F1F1;
+            color: #2B2727;
+            border-radius: 15px;
+            padding: 10px 15px;
+            margin-right: 5px;
+            margin-left: 5px;
+            font-size: 16px;
+            max-width: 100%;
+            word-wrap: break-word;
+            word-break: break-all;
+            box-sizing: border-box;
+        }
+        .message-container p {
+            margin: 1em 0 !important;
+        }
+        .message-container p:last-child {
+            margin-bottom: 0 !important;
+        }
+        .message-container p:not(:last-child) {
+            margin-bottom: 1em !important; 
+        }
+        .st-chat-input {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .stButton > button {
+            padding: 5px 20px;
+            background: #DDE3EA;
+            color: #2B2727;
             border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 5px 0;
+            width: 100%;
         }
-        .stDownloadButton button:hover {
-            background: linear-gradient(135deg, #707070 0%, #707070 100%) !important;
+        .stButton > button:hover {
+            background: #C0C0C0;
         }
-        .centered {
+        .stRadio > div {
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100%;
-            text-align: center;
-        }
-        [data-testid='stFileUploader'] section button {
-            background: transparent !important;
-            color: #46474A !important;
-            border-radius: 5px;
+            padding: 0px 0px 0px 18px;
             border: none;
-            display: block;
-            margin: 0 auto;
+            border-radius: 5px;
+            background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%);
         }
-        [data-testid='stFileUploader'] section {
-            background: #ECECEC!important;
-            color: black !重要;
-            padding: 0;
+        .message {
+            white-space: pre-wrap !important;
         }
-        [data-testid='stFileUploader'] section > input + div {
-            display: none;
+        .message-container pre {
+            background-color: #1E1E1E !important;
+            border-radius: 5px !important;
+            padding: 10px !important;
+            overflow-x: auto !important;
+            margin: 10px 0 !important;
+            white-space: pre !important;
         }
-        [data-testid=stSidebar] {
-            background: #F9F9F9;
+        .message-container pre code {
+            font-family: 'Source Code Pro', 'Courier New', monospace !important;
+            font-size: 16px !important;
+            line-height: 1.4 !important;
+            white-space: pre !important;
+            color: #f1f1f1 !important;
+        }
+        .message-container code:not(pre code) {
+            background: #1E1E1E !important;
+            color: #f1f1f1 !important;
+            font-size: 13px !important;
+            border-radius: 4px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            padding: 2px 4px !important;
+            margin: 2px 2px !important;
+        }
+        .stCodeBlock button {
+            color: white !important;
+        }
+        .stCodeBlock button svg {
+            stroke: white !important;
+        }
+        .stCodeBlock button:hover {
+            color: white !important;
+        }
+        .stCodeBlock button:hover svg {
+            stroke: white !important;
+        }
+        .fixed-bottom {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            background-color: white !important;
+            padding: 10px !important;
+            border-top: 1px solid #ddd !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            z-index: 9999 !important;
+        }
+        .text-input {
+            flex: 1 !important;
+            padding: 10px !important;
+            margin-right: 10px !important;
+            border-radius: 5px !important;
+            border: 1px solid #ddd !important;
+        }   
+        .btn {
+            padding: 10px !important;
+            border-radius: 5px !important;
+            background-color: #f0f0f0 !important;
+            border: 1px solid #ddd !important;
+            cursor: pointer !important;
+            width: 40px !important;
+            height: 40px !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }   
+        .message-container p {
+            margin: 1em 0 !important;
+        }
+        .message-container p:last-child {
+            margin-bottom: 0 !important;
+        }
+        .message-container p + ul,
+        .message-container p + ol {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+        .message-container p + ul + p,
+        .message-container p + ol + p {
+            margin-top: 1em !important;
         }
         </style>
         """,
         unsafe_allow_html=True
     )
-# 初始化 session state 變數
-if 'zip_buffer' not in st.session_state:
-    st.session_state.zip_buffer = None
-if 'zip_file_ready' not in st.session_state:
-    st.session_state.zip_file_ready = False
-if 'df_text' not in st.session_state:
-    st.session_state.df_text = pd.DataFrame()
-if 'pdf_file' not in st.session_state:
-    st.session_state.pdf_file = None
-if 'data_file' not in st.session_state:
-    st.session_state.data_file = None
-if 'json_file' not in st.session_state:
-    st.session_state.json_file = None
-if 'api_key' not in st.session_state:
-    st.session_state.api_key = ""
-if 'height' not in st.session_state:
-    st.session_state.height = ""
-if 'width' not in st.session_state:
-    st.session_state.width = ""
-if 'symbol' not in st.session_state:
-    st.session_state.symbol = ""
-if 'height_map_str' not in st.session_state:
-    st.session_state.height_map_str = ""
-if 'height_map' not in st.session_state:
-    st.session_state.height_map = {}
-if 'width_map_str' not in st.session_state:
-    st.session_state.width_map_str = ""
-if 'width_map' not in st.session_state:
-    st.session_state.width_map = {}
-if 'user_input1' not in st.session_state:
-    st.session_state.user_input1 = ""
-if 'user_input2' not in st.session_state:
-    st.session_state.user_input2 = "" 
-if 'task_completed' not in st.session_state:
-    st.session_state.task_completed = False
-if 'total_input_tokens' not in st.session_state:
-    st.session_state.total_input_tokens = 0
-if 'total_output_tokens' not in st.session_state:
-    st.session_state.total_output_tokens = 0
-def create_directories():
-    os.makedirs("static", exist_ok=True)
-    os.makedirs("temp", exist_ok=True)
+            
+#%% 產生對話
+async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
+    try:
+        if system_prompt:
+            messages.insert(0, {"role": "system", "content": system_prompt})
 
-def clear_directory(directory):
-    if os.path.exists(directory):
-        shutil.rmtree(directory)
-    os.makedirs(directory, exist_ok=True)
+        if st.session_state['language']:
+            prompt = messages[-1]['content'] + f" 請使用{st.session_state['language']}回答。"
+            messages[-1]['content'] = prompt
 
-def search_pdf(file, text):
-    doc = fitz.open(file)
-    res = []
-    for i, page in enumerate(doc):
-        insts = page.search_for(text)
-        for inst in insts:
-            res.append((i + 1, inst))
-    return res
-
-def extract_img(file, page_num, rect, out_dir, h, w=None, z=6.0, offset=0):
-    doc = fitz.open(file)
-    page = doc.load_page(page_num - 1)
-    mat = fitz.Matrix(z, z)
-    pw = page.rect.width
-    if w is None:
-        clip = fitz.Rect(0, rect.y0 + offset, pw, rect.y0 + offset + h)
-    else:
-        clip = fitz.Rect(max(0, rect.x0 - 20), rect.y0 + offset, min(pw, rect.x0 - 20 + w), rect.y0 + offset + h)
-    pix = page.get_pixmap(matrix=mat, clip=clip)
-    img_path = os.path.join(out_dir, f"page_{page_num}.png")
-    pix.save(img_path)
-    return img_path
-
-def rename_img(old_p, new_name):
-    new_p = os.path.join(os.path.dirname(old_p), new_name)
-    os.rename(old_p, new_p)
-    return new_p
-
-def search_extract_img(file, text, out_dir, h, w=None, offset=0):
-    res = search_pdf(file, text)
-    if res:
-        page_num, rect = res[0]
-        img_p = extract_img(file, page_num, rect, out_dir, h=h, w=w, offset=offset)
-        new_img_p = rename_img(img_p, f"{text}.png")
-        return page_num, new_img_p
-    return None, None
-
-def format_text(text):
-    lines = text.split('\n\n')
-    formatted_lines = [line.strip() for line in lines if line.strip()]
-    return '\n'.join(formatted_lines)
-
-def extract_text_from_image(img_path):
-    client = vision.ImageAnnotatorClient()
-    with io.open(img_path, 'rb') as image_file:
-        content = image_file.read()
-    image = vision.Image(content=content)
-    response = client.text_detection(image=image)
-    texts = response.text_annotations
-    if texts:
-        return texts[0].description
-    return ""
-
-async def fetch_gpt_response(session, api_key, text, prompt):
-    url = "https://api.openai.com/v1/chat/completions"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
-    payload = {
-        "model": "gpt-4o-mini",
-        "messages": [{"role": "user", "content": prompt.format(text)}]
-    }
-    async with session.post(url, headers=headers, json=payload) as response:
-        return await response.json()
-
-async def process_texts(api_key, texts, prompt, batch_size=10):
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
-            tasks.extend([fetch_gpt_response(session, api_key, text, prompt) for text in batch])
-            if tasks:
-                results = await asyncio.gather(*tasks)
-                for result, text in zip(results, batch):
-                    organized_text = result['choices'][0]['message']['content']
-                    formatted_text = format_text(organized_text)
-                    yield {"貨號": text, "文案": formatted_text}
-
-def search_and_zip_case1(file, texts, h, w, out_dir, zipf, api_key, prompt):
-    total_files = len(texts)
-    progress_bar = st.progress(0)
-    progress_text = st.empty()
-    progress_text.text("準備載入PDF與CSV文件")
-    
-    not_found = []
-
-    for i, text in enumerate(texts):
-        page_num, img_p = search_extract_img(file, text, out_dir, h=h, w=w)
-        if img_p:
-            zipf.write(img_p, os.path.basename(img_p))
+        response = await client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            top_p=top_p,
+            presence_penalty=presence_penalty,
+            frequency_penalty=frequency_penalty,
+            max_tokens=max_tokens,
+            stream=True
+        )
+        streamed_text = ""
+        async for chunk in response:
+            chunk_content = chunk.choices[0].delta.content
+            if chunk_content is not None:
+                streamed_text += chunk_content
+                html_chunk = format_message(streamed_text)
+                yield html_chunk
+    except Exception as e:
+        error_message = str(e)
+        if "Incorrect API key provided" in error_message:
+            yield "請輸入正確的 OpenAI API Key"
+        elif "insufficient_quota" in error_message:
+            yield "您的 OpenAI API餘額不足，請至您的帳戶加值"
+        elif isinstance(e, UnicodeEncodeError):
+            yield "請輸入正確的 OpenAI API Key"
         else:
-            not_found.append(text)
-        progress = (i + 1) / total_files
-        progress_bar.progress(progress)
-        progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
-    progress_bar.empty()
-    progress_text.empty()
+            yield f"Error: {error_message}"
 
-    return not_found
-
-def search_and_zip_case2(file, texts, symbol, height_map, width_map, out_dir, zipf):
-    total_files = len(texts)
-    progress_bar = st.progress(0)
-    progress_text = st.empty()
-    progress_text.text("準備載入PDF與CSV文件")
-
-    doc = fitz.open(file)
-    symbol_found = False
-    
-    not_found = []
-
-    for page in doc:
-        if page.search_for(symbol):
-            symbol_found = True
-            break
-
-    if not symbol_found:
-        st.warning(f"無法在PDF中找到 \"{symbol}\"")
-        return
-
-    for i, text in enumerate(texts):
-        res = search_pdf(file, text)
-        if res:
-            page_num, rect = res[0]
-            page = doc.load_page(page_num - 1)
-            symbol_count = len(page.search_for(symbol))
-            height = height_map.get(symbol_count, 240)
-            width = width_map.get(symbol_count, None)
-            img_p = extract_img(file, page_num, rect, out_dir, h=height, w=width, offset=-10)
-            new_img_p = rename_img(img_p, f"{text}.png")
-            zipf.write(new_img_p, os.path.basename(new_img_p))
-        else:
-            not_found.append(text)
-        progress = (i + 1) / total_files
-        progress_bar.progress(progress)
-        progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
-    
-    progress_bar.empty()
-    progress_text.empty()
-    
-    return not_found
-
-def update_api_key():
-    if st.session_state['api_key'] != st.session_state['api_key_input']:
-        st.session_state['api_key'] = st.session_state['api_key_input']
-        
-def update_height():
-    if st.session_state['height'] != st.session_state['height_input']:
-        st.session_state['height'] = st.session_state['height_input']
-
-def update_width():
-    if st.session_state['width'] != st.session_state['width_input']:
-        st.session_state['width'] = st.session_state['width_input']
-
-def update_user_input1():
-    if st.session_state['user_input1'] != st.session_state['user_input_input1']:
-        st.session_state['user_input1'] = st.session_state['user_input_input1']
-
-def update_user_input2():
-    if st.session_state['user_input2'] != st.session_state['user_input_input2']:
-        st.session_state['user_input2'] = st.session_state['user_input_input2']
-        
-def update_symbol():
-    if st.session_state['symbol'] != st.session_state['symbol_input']:
-        st.session_state['symbol'] = st.session_state['symbol_input']
-
-def update_height_map_str():
-    st.session_state.height_map_errors = []  
-    if st.session_state['height_map_str'] != st.session_state['height_map_str_input']:
-        st.session_state['height_map_str'] = st.session_state['height_map_str_input']
-        height_map = {}
-        for item in st.session_state['height_map_str'].split("\n"):
-            if ":" in item:
-                try:
-                    k, v = item.split(":")
-                    height_map[int(k.strip())] = int(v.strip())
-                except ValueError:
-                    st.session_state.height_map_errors.append(f"無效的高度對應輸入: {item}")
-        st.session_state['height_map'] = height_map
-
-def update_width_map_str():
-    st.session_state.width_map_errors = [] 
-    if st.session_state['width_map_str'] != st.session_state['width_map_str_input']:
-        st.session_state['width_map_str'] = st.session_state['width_map_str_input']
-        width_map = {}
-        for item in st.session_state['width_map_str'].split("\n"):
-            if ":" in item:
-                try:
-                    k, v = item.split(":")
-                    width_map[int(k.strip())] = int(v.strip())
-                except ValueError:
-                    st.session_state.width_map_errors.append(f"無效的寬度對應輸入: {item}")
-        st.session_state['width_map'] = width_map
-
-def split_content(row):
-    content = row['文案']
-    themes = re.split(r'【([^】]+)】', content)
-    result = []
-    
-    for i in range(1, len(themes), 2):
-        theme = themes[i]
-        titles = re.split(r'〖([^〗]+)〗', themes[i+1])
-        for j in range(1, len(titles), 2):
-            title = titles[j]
-            texts = re.split(r'\d\.\s', titles[j+1])
-            texts = [text.strip() for text in texts if text.strip()]
-            row_result = [row['貨號'], row['圖片內容'], theme, title] + texts
-            result.append(row_result)
-    
-    return result
-
-def split_columns(df):
-    split_data = []
-
-    for idx, row in df.iterrows():
-        split_data.extend(split_content(row))
-
-    columns = ['貨號', '圖片內容', '主題', '標題'] + [f'文案{i}' for i in range(1, max(len(row) for row in split_data) - 3)]
-
-    result_df = pd.DataFrame(split_data, columns=columns)
-    
-    result_df['圖片內容'] = result_df['圖片內容'].mask(result_df['圖片內容'].duplicated(), '')
-
-    return result_df
-
-def main():
-    create_directories() 
-    
-    with st.sidebar:
-        st.image("Image/91APP_logo.png")
-        selected = option_menu("",
-        ["PDF截圖與AI文案",'品名翻譯'],
-        icons=['caret-right-fill','caret-right-fill'], menu_icon="robot", default_index=0,
-        styles={
-            "container": {"padding": "0!important", "background": "#F9F9F9","border-radius": "0px"},
-            "icon": {"padding": "0px 10px 0px 0px !important","color": "#FF8C00", "font-size": "17px"},
-            "nav-link": {"font-size": "17px","color": "#46474A", "text-align": "left", "margin":"0px", "--hover-color": "#f0f0f0"},
-            "nav-link-selected": { "border-radius": "0px","background": "#EAE9E9", "color": "#2b2b2b"},
+def generate_perplexity_response(prompt, history, model, temperature, top_p, presence_penalty, max_tokens, system_prompt, language):
+    try:
+        url = "https://api.perplexity.ai/chat/completions"
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "Authorization": f"Bearer {st.session_state['perplexity_api_key']}"
         }
-    )
 
-        if selected != "品名翻譯":
-            with stylable_container(
-                    key="popover",
-                    css_styles="""
-                        button {
-                            background: #46474A;
-                            color: white;
-                            border-radius: 8px;
-                            border: none;
-                            width: 100%;
-                            transition: background-color 0.3s;
-                        }
-                    """,
-                ):
-                st.write('\n')
-                popover = st.popover("文件上傳")
+        if st.session_state['language']:
+            prompt = prompt + f" 請使用{st.session_state['language']}回答。"
 
-            pdf_file = popover.file_uploader("上傳商品型錄 PDF", type=["pdf"], key="pdf_file_uploader",help="記得先刪除封面、目錄和多餘頁面")
-            data_file = popover.file_uploader("上傳貨號檔 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader",help="貨號放A欄，且首列須為任意標題")
-            json_file = popover.file_uploader("上傳 Google Cloud 憑證 JSON", type=["json"], key="json_file_uploader")
-            st.write("\n")
-            with stylable_container(
-                key="text_input_styles",
-                css_styles="""
-                    label {
-                        color: #46474a;
-                    }
-                    """
-                ):
-                api_key = st.text_input("輸入 OpenAI API Key", type="password",key="api_key_input",on_change=update_api_key,value=st.session_state.api_key)
+        context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history])
+        full_prompt = f"{system_prompt}\n\n{context}\nuser: {prompt}"
 
-            if pdf_file:
-                st.session_state.pdf_file = pdf_file
-            if data_file:
-                st.session_state.data_file = data_file
-            if json_file:
-                st.session_state.json_file = json_file
-            if api_key:
-                st.session_state.api_key = api_key
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": full_prompt}
+        ]
 
-        pdf_file = st.session_state.get('pdf_file', None)
-        data_file = st.session_state.get('data_file', None)
-        json_file = st.session_state.get('json_file', None)
-        api_key = st.session_state.get('api_key', None)
+        data = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "top_p": top_p,
+            "max_tokens": max_tokens,
+            "presence_penalty": presence_penalty,
+            "stream": True
+        }
 
-    if json_file:
-        temp_json_path = os.path.join("temp", json_file.name)
-        with open(temp_json_path, "wb") as f:
-            f.write(json_file.getbuffer())
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_json_path
+        response = requests.post(url, headers=headers, json=data, stream=True)
+        response.raise_for_status()
 
-    if selected == "PDF截圖與AI文案":
-        options = ui.tabs(options=[ "每頁商品數固定","每頁商品數不固定"], default_value= "每頁商品數固定", key="tabs")
-        if options == "每頁商品數固定":
-            col1 ,col2 = st.columns(2)
-            col1.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-            col2.text_input("指定截圖寬度 (px)", placeholder="未填則預設為完整PDF頁寬", value=st.session_state.width, key='width_input', on_change=update_width,help="選填")
-            st.text_area("給 ChatGPT 的 Prompt",height=286, value=st.session_state.user_input1, key='user_input_input1', on_change=update_user_input1)
-        elif  options == "每頁商品數不固定":  
-            col1, col2 = st.columns([1,1.7])
-            col1.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
-            col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=120, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-            col1.text_area("對應的截圖寬度（px）", placeholder="未填則預設為完整PDF頁寬，寫法同截圖高度", height=120, value=st.session_state.width_map_str, key='width_map_str_input', on_change=update_width_map_str, help="選填")
-            col2.text_area("給 ChatGPT 的 Prompt",height=370, value=st.session_state.user_input2, key='user_input_input2', on_change=update_user_input2)
-    
-    elif selected == "品名翻譯":
-        def translate_product_name(product_name, knowledge_data):
-            translations = {}
-            lines = product_name.split('\n')
-            for line in lines:
-                if '：' in line:
-                    type_name, eng_name = line.split('：', 1)
-                    matching_row = knowledge_data[(knowledge_data.iloc[:, 0] == type_name) & (knowledge_data.iloc[:, 1].str.lower() == eng_name.strip().lower())]
-                    if not matching_row.empty:
-                        translations[type_name] = matching_row.iloc[0, 2]
-                    else:
-                        translations[type_name] = eng_name.strip()
+        full_response = ""
+        for line in response.iter_lines():
+            if line:
+                decoded_line = line.decode('utf-8')
+                if decoded_line.startswith("data: "):
+                    json_data = json.loads(decoded_line[len("data: "):])
+                    if "choices" in json_data and len(json_data["choices"]) > 0:
+                        chunk = json_data["choices"][0]["delta"].get("content", "")
+                        full_response += chunk
+                        html_chunk = format_message(full_response)
+                        yield html_chunk
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 400:
+            error_detail = e.response.json()
+            yield f"HTTP 400 Error: {error_detail}"
+        elif e.response.status_code == 401:
+            yield "請輸入正確的 Perplexity API Key"
+        else:
+            yield f"HTTP Error: {e.response.status_code} - {e.response.reason}"
+    except UnicodeEncodeError:
+        yield "請輸入正確的 Perplexity API Key"
+    except json.JSONDecodeError as e:
+        yield f"JSON Decode Error: {str(e)}"
+    except Exception as e:
+        yield f"Unexpected Error: {str(e)}"
+
+async def handle_prompt_submission(prompt):
+    if st.session_state['model_type'] == "ChatGPT":
+        client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
+        message_func(prompt, is_user=True)
+
+        thinking_placeholder = st.empty()
+        status_text = "Thinking..."
+        st.session_state["messages_ChatGPT"].append({"role": "assistant", "content": status_text})
+        with thinking_placeholder.container():
+            message_func(status_text, is_user=False)
+
+        response_container = st.empty()
+        full_response = ""
+        
+        messages = st.session_state["messages_ChatGPT"] + [{"role": "user", "content": prompt}]
+        
+        async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
+            if status_text in [msg['content'] for msg in st.session_state["messages_ChatGPT"] if msg['role'] == 'assistant']:
+                st.session_state["messages_ChatGPT"] = [msg for msg in st.session_state["messages_ChatGPT"] if msg['content'] != status_text]
+                thinking_placeholder.empty()
+
+            full_response = response_message
+            response_container.markdown(
+                f"""
+                <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
+                    <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                    <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                        {full_response} \n </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        st.session_state["messages_ChatGPT"].append({"role": "assistant", "content": full_response})
+        response_container.empty()
+        message_func(full_response, is_user=False)
+        chat_history_gpt[st.session_state['model_type']] = st.session_state["messages_ChatGPT"]
+        save_chat_history(chat_history_gpt, 'ChatGPT')
+        st.session_state['prev_response'] = full_response 
+
+    elif st.session_state['model_type'] == "Perplexity":
+        message_func(prompt, is_user=True)
+        
+        prev_state = st.session_state.get('prev_state', {}).get('messages_Perplexity', []).copy()
+        
+        thinking_placeholder = st.empty()
+        status_text = "Thinking..."
+        st.session_state["messages_Perplexity"].append({"role": "assistant", "content": status_text})
+        with thinking_placeholder.container():
+            message_func(status_text, is_user=False)
+
+        response_container = st.empty()
+        full_response = ""
+        history = st.session_state["messages_Perplexity"]
+
+        for response_message in generate_perplexity_response(
+                prompt,
+                history,
+                st.session_state['perplexity_model'],
+                st.session_state['temperature'],
+                st.session_state['top_p'],
+                st.session_state['presence_penalty'],
+                st.session_state['max_tokens'],
+                st.session_state['perplexity_system_prompt'],
+                st.session_state['language']):
+
+            if status_text in [msg['content'] for msg in st.session_state["messages_Perplexity"] if msg['role'] == 'assistant']:
+                st.session_state["messages_Perplexity"] = [msg for msg in st.session_state["messages_Perplexity"] if msg['content'] != status_text]
+                thinking_placeholder.empty()
+
+            full_response = response_message
+            response_container.markdown(
+                f"""
+                <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
+                    <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                    <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                        {full_response} \n </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        st.session_state["messages_Perplexity"].append({"role": "assistant", "content": full_response})
+        response_container.empty()
+        message_func(full_response, is_user=False)
+        chat_history_perplexity[st.session_state['model_type']] = st.session_state["messages_Perplexity"]
+        save_chat_history(chat_history_perplexity, 'Perplexity')
+        st.session_state['prev_response'] = full_response  
+
+        if prev_state != st.session_state["messages_Perplexity"]:
+            st.session_state['prev_state'] = {'messages_Perplexity': st.session_state["messages_Perplexity"].copy()}
+
+#%% 格式設定與轉換
+def format_message(text):
+    if isinstance(text, (list, dict)):
+        return f"<pre><code>{json.dumps(text, indent=2)}</code></pre>"
+
+    code_pattern = re.compile(r'(```)(.*?)(```|$)', re.DOTALL)
+    code_blocks = {}
+    code_counter = 0
+
+    def code_replacer(match):
+        nonlocal code_counter
+        code_key = f"CODE_BLOCK_{code_counter}"
+        code_blocks[code_key] = match.group(0)
+        code_counter += 1
+        return code_key
+
+    text = code_pattern.sub(code_replacer, text)
+
+    header_pattern = re.compile(r'^(#+)\s+(.*)', re.MULTILINE)
+
+    def header_replacer(match):
+        content = match.group(2)
+        return f"<strong>{content}</strong>"
+
+    text = header_pattern.sub(header_replacer, text)
+
+    bold_pattern = re.compile(r'\*\*(.*?)\*\*')
+    text = bold_pattern.sub(r'<b>\1</b>', text)
+
+    tables = parse_markdown_tables(text)
+    combined_result = []
+
+    for table in tables:
+        if isinstance(table, pd.DataFrame):
+            table.index = table.index + 1
+            styled_item = table.style.set_table_styles(
+                [{'selector': 'thead th', 'props': [('background-color', '#333'), ('color', 'white')]},
+                 {'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#f2f2f2')]},
+                 {'selector': 'tbody tr:hover', 'props': [('background-color', '#ddd')]}]
+            ).set_properties(**{'text-align': 'left', 'font-family': 'Arial', 'font-size': '14px'})
+            styled_html = styled_item.to_html()
+            styled_html = styled_html.replace('border="1"', 'border="0"')
+            styled_html = styled_html.replace('<th>', '<th style="border: none;">')
+            styled_html = styled_html.replace('<td>', '<td style="border: none;">')
+            styled_html = styled_html.replace('<table ', '<table style="width: 100%;" ')
+            combined_result.append('<div style="height: 15px;"></div>')
+            combined_result.append(f'<div style="display: flex; justify-content: center;">{styled_html}</div>')
+        elif isinstance(table, list):
+            combined_result.append("<br>".join(map(str, table)))
+        else:
+            combined_result.append(table)
+
+    combined_text = "\n".join(combined_result)
+
+    for code_key, code_block in code_blocks.items():
+        combined_text = combined_text.replace(code_key, code_block)
+
+    return combined_text
+
+def parse_markdown_tables(markdown_text):
+    lines = markdown_text.strip().split("\n")
+    current_table = []
+    combined_result = []
+
+    for line in lines:
+        if "|" in line:
+            row = [cell.strip() for cell in line.split("|")[1:-1]]
+            if not all(cell == '-' * len(cell) for cell in row):
+                current_table.append(row)
+        else:
+            if current_table:
+                combined_result.append(current_table)
+                current_table = []
+            combined_result.append(line)
+
+    if current_table:
+        combined_result.append(current_table)
+
+    dfs = []
+    for table in combined_result:
+        if isinstance(table, list):
+            if len(table) > 1:
+                header = table[0]
+                rows = [row for row in table[1:] if len(row) == len(header)]
+                if rows:
+                    df = pd.DataFrame(rows, columns=header)
+                    dfs.append(df)
                 else:
-                    translations[line] = line
-            return translations
-        
-        def load_data(file):
-            if file.name.endswith('.csv'):
-                return pd.read_csv(file)
-            elif file.name.endswith('.xlsx'):
-                return pd.read_excel(file, sheet_name=None)
-    
-        col1, col2 = st.columns(2)
-        with col1:
-            knowledge_file = st.file_uploader("上傳翻譯對照表 CSV/XLSX", type=["xlsx", "csv"])
-            with st.expander("品名對照表 範例格式"):
-                example_knowledge_data = pd.read_csv("品名對照表範例格式.csv")
-                ui.table(example_knowledge_data)
-                example_knowledge_csv = example_knowledge_data.to_csv(index=False).encode('utf-8-sig')
-                st.download_button(label="下載範例檔案", data=example_knowledge_csv, file_name="品名對照表範例格式.csv", mime="text/csv")
-        
-        with col2:
-            test_file = st.file_uploader("上傳需要翻譯的檔案 CSV/XLSX", type=["xlsx", "csv"])
-            with st.expander("待翻譯品名 範例格式"):
-                example_test_data = pd.read_csv("翻譯品名範例格式.csv")
-                ui.table(example_test_data)
-                example_test_csv = example_test_data.to_csv(index=False).encode('utf-8-sig')
-                st.download_button(label="下載範例檔案", data=example_test_csv, file_name="翻譯品名範例格式.csv", mime="text/csv")
-        
-        if knowledge_file and test_file:
-            knowledge_data = load_data(knowledge_file)
-            if isinstance(knowledge_data, dict):
-                knowledge_data = knowledge_data[list(knowledge_data.keys())[0]]
-        
-            test_data = load_data(test_file)
-        
-            if isinstance(test_data, dict):
-                test_data = test_data[list(test_data.keys())[0]]
-        
-            if not isinstance(test_data, pd.DataFrame):
-                st.error("無法讀取測試檔案，請檢查檔案格式是否正確。")
-                return
-            translated_data = [] 
-            column_names = test_data.columns.to_list()
-            for index, row in test_data.iterrows():
-                product_translations = translate_product_name(row[column_names[1]], knowledge_data)  
-                product_translations = {column_names[0]: row[column_names[0]], **product_translations} 
-                translated_data.append(product_translations)
-        
-            translated_df = pd.DataFrame(translated_data)
+                    dfs.append(table[0])
+            else:
+                dfs.append(table[0])
+        else:
+            dfs.append(table)
 
-            placeholder1 = st.empty()
-            placeholder2 = st.empty()
-            placeholder3 = st.empty()
+    return dfs
 
-            with placeholder1.container():
-                st.divider()
-                st.write("翻譯結果")
-                
-            with placeholder2.container(height=400, border=None):
-                ui.table(translated_df)
+def message_func(text, is_user=False):
+    model_url = f"data:image/png;base64,{assistant_avatar}"
+    user_url = f"data:image/png;base64,{st.session_state['user_avatar']}"
 
-            with placeholder3.container():
-                csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
-                csv_data = csv.encode('utf-8-sig')
-                下載csv = st.download_button(
-                    label="下載 CSV 檔案",
-                    data=csv_data,
-                    file_name="翻譯結果.csv",
-                    mime="text/csv"
-                )
-            if 下載csv:
-                placeholder1.empty()
-                placeholder2.empty()
-                placeholder3.empty()
-                
-    def organize_text_with_gpt(text, api_key):
-        client = OpenAI(api_key=api_key)
-        if selected == "PDF截圖與AI文案" and options == "每頁商品數固定":
-            prompt = f"'''{text} '''{st.session_state.user_input1}"
-        elif selected == "PDF截圖與AI文案" and options == "每頁商品數不固定":
-            prompt = f"'''{text} '''{st.session_state.user_input2}"
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
+    avatar_url = model_url
+    if is_user:
+        avatar_url = user_url
+        message_alignment = "flex-end"
+        message_bg_color = "linear-gradient(135deg, #30A2FD 0%, #035DE5 100%)"
+        avatar_class = "user-avatar"
+        avatar_size = "width: 32px; height: 40px;"
+        text_with_line_breaks = html.escape(text).replace("\n", "<br>")
+        st.markdown(
+            f"""
+                <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
+                    <div class="message-container" style="background: {message_bg_color}; color: white; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 10px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                        {text_with_line_breaks} \n </div>
+                    <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
+                </div>
+                """,
+            unsafe_allow_html=True,
+        )
+    else:
+        message_alignment = "flex-start"
+        message_bg_color = "#F0F4F8"
+        avatar_class = "bot-avatar"
+        avatar_size = "width: 45px; height: 28px;"
+        if assistant_avatar == assistant_avatar_perplexity:
+            avatar_class += " perplexity"
+
+        result = parse_markdown_tables(text)
+        combined_result = []
+
+        for item in result:
+            if isinstance(item, pd.DataFrame):
+                item.index = item.index + 1
+                styled_item = item.style.set_table_styles(
+                    [{'selector': 'thead th', 'props': [('background-color', '#333'), ('color', 'white')]},
+                     {'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#f2f2f2')]},
+                     {'selector': 'tbody tr:hover', 'props': [('background-color', '#ddd')]}]
+                ).set_properties(**{'text-align': 'left', 'font-family': 'Arial', 'font-size': '14px'})
+                combined_result.append('<div style="height: 15px;"></div>')  
+                styled_html = styled_item.to_html()
+                styled_html = styled_html.replace('border="1"', 'border="0"')  
+                styled_html = styled_html.replace('<th>', '<th style="border: none;">') 
+                styled_html = styled_html.replace('<td>', '<td style="border: none;">') 
+                combined_result.append(f'<div style="display: flex; justify-content: center;">{styled_html}</div>')
+            else:
+                combined_result.append(item)
+
+        combined_text = "\n".join(combined_result)
+        formatted_message = format_message(combined_text)
+
+        st.markdown(
+            f"""
+                <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: {message_alignment};">
+                    <img src="{avatar_url}" class="{avatar_class}" alt="avatar" style="{avatar_size}" />
+                    <div class="message-container" style="background: {message_bg_color}; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                        {formatted_message} \n </div>
+                </div>
+                """,
+            unsafe_allow_html=True,
         )
         
-        encoding = tiktoken.encoding_for_model("gpt-4")
-        input_tokens = len(encoding.encode(prompt))
-        output_tokens = len(encoding.encode(response.choices[0].message.content))
-        
-        st.session_state.total_input_tokens += input_tokens
-        st.session_state.total_output_tokens += output_tokens
-        
-        return response.choices[0].message.content
-    
-    def check_required_fields():
-        missing_fields = []
-        if not pdf_file:
-            missing_fields.append("PDF")
-        if not data_file:
-            missing_fields.append("CSV 或 XLSX")
-        if not json_file:
-            missing_fields.append("Google Cloud 憑證")
-        if not api_key:
-            missing_fields.append("OpenAI API Key")
-        if selected == "PDF截圖與AI文案" and options == "每頁商品數固定"  and not st.session_state.user_input1:
-            missing_fields.append("給 ChatGPT 的 Prompt")
-        if selected == "PDF截圖與AI文案" and options == "每頁商品數不固定"  and not st.session_state.user_input2:
-            missing_fields.append("給 ChatGPT 的 Prompt")
-        if selected == "PDF截圖與AI文案" and options == "每頁商品數固定" and not st.session_state.height:
-            missing_fields.append("指定截圖高度")
-        if selected == "PDF截圖與AI文案" and options == "每頁商品數不固定":
-            if not st.session_state.symbol:
-                missing_fields.append("用來判斷截圖高度的符號或文字")
-            if not st.session_state.height_map:
-                missing_fields.append("對應的截圖高度")
-        return missing_fields
-    
-    missing_fields = check_required_fields()
-    if selected != "品名翻譯":
-        with stylable_container(
-                key="run_btn",
-                css_styles="""
-                    button {
-                        background-color: #46474A;
-                        color: white;
-                        border-radius: 8px;
-                        border: none;
-                        width: 25%;
-                    }
-                    button:hover {
-                        background: #6B6C70;
-                    }
-                    """,
-                ):
-            start_running = st.button("開始執行", key="run_btn")
+#%% 側邊欄設置
+def update_openai_api_key():
+    if st.session_state['openai_api_key_input'] != st.session_state['chatbot_api_key']:
+        st.session_state['chatbot_api_key'] = st.session_state['openai_api_key_input']
+        settings['chatbot_api_key'] = st.session_state['chatbot_api_key']
+        save_settings(settings)
+        if not st.session_state['chat_started']:
+            st.session_state["messages_ChatGPT"][0]['content'] = "請問需要什麼協助？"
 
-        if start_running:
-            if missing_fields:
-                st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
+def update_perplexity_api_key():
+    if st.session_state['perplexity_api_key_input'] != st.session_state['perplexity_api_key']:
+        st.session_state['perplexity_api_key'] = st.session_state['perplexity_api_key_input']
+        settings['perplexity_api_key'] = st.session_state['perplexity_api_key']
+        save_settings(settings)
+        if not st.session_state['chat_started']:
+            st.session_state["messages_Perplexity"][0]['content'] = "請問需要什麼協助？"
+
+def reset_chat(confirm_reset=None):
+    if confirm_reset is None:
+        st.session_state['reset_confirmation'] = True
+    else:
+        if confirm_reset:
+            if st.session_state['model_type'] == 'ChatGPT':
+                st.session_state['chat_started'] = False
+                st.session_state['messages_ChatGPT'] = [{"role": "assistant", "content": "請問需要什麼協助？" }]
             else:
-                st.write('\n')
-                st.session_state.total_input_tokens = 0
-                st.session_state.total_output_tokens = 0
-    
-                st.session_state.task_completed = False
-                st.session_state.zip_buffer = None
-                st.session_state.zip_file_ready = False
-                st.session_state.df_text = pd.DataFrame()
-    
-                temp_dir = "temp"
-                output_dir = os.path.join(temp_dir, "output")
-                clear_directory(output_dir)  
-    
-                pdf_path = os.path.join(temp_dir, pdf_file.name)
-                with open(pdf_path, "wb") as f:
-                    f.write(pdf_file.getbuffer())
-    
-                data_path = os.path.join(temp_dir, data_file.name)
-                with open(data_path, "wb") as f:
-                    f.write(data_file.getbuffer())
-    
-                try:
-                    if data_file.name.endswith('.csv'):
-                        df = pd.read_csv(data_path, encoding='utf-8')
-                    else:
-                        df = pd.read_excel(data_path, engine='openpyxl')
-                except UnicodeDecodeError:
-                    if data_file.name.endswith('.csv'):
-                        df = pd.read_csv(data_path, encoding='latin1')
-                    else:
-                        df = pd.read_excel(data_path, engine='openpyxl')
-    
-                texts = df.iloc[:, 0].tolist()
-    
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, 'w') as zipf:
-                    not_found = []
-                    if options == "每頁商品數固定":
-                        not_found = search_and_zip_case1(pdf_path, texts, int(st.session_state.height), int(st.session_state.width) if st.session_state.width else None, output_dir, zipf, api_key, st.session_state.user_input1)
-                    elif options == "每頁商品數不固定":
-                        doc = fitz.open(pdf_path)
-                        symbol_found = False
-
-                        for page in doc:
-                            if page.search_for(st.session_state.symbol):
-                                symbol_found = True
-                                break
-
-                        if not symbol_found:
-                            st.warning(f"無法在PDF中找到 \"{st.session_state.symbol}\"")
-                            return
-
-                        not_found = search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, st.session_state.width_map, output_dir, zipf)
-                    
-                    if not_found:
-                        df_not_found = pd.DataFrame(not_found, columns=["無法搜尋到的貨號"])
-                        csv_buffer_not_found = io.StringIO()
-                        df_not_found.to_csv(csv_buffer_not_found, index=False, encoding='utf-8-sig')
-                        csv_data_not_found = csv_buffer_not_found.getvalue().encode('utf-8-sig')
-                        zipf.writestr("無法搜尋到的貨號.csv", csv_data_not_found)
-                        st.warning("有特定貨號不存在於PDF中，請參考ZIP檔中的錯誤說明檔。")
-    
-                    image_files = [f for f in os.listdir(output_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
-                    data = []
-                    total_files = len(image_files)
-                    
-                    progress_bar = st.progress(0)
-                    progress_text = st.empty()
-                    progress_text.text("準備載入截圖")
-    
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                        futures = {executor.submit(extract_text_from_image, os.path.join(output_dir, image_file)): image_file for image_file in image_files}
-                        for future in concurrent.futures.as_completed(futures):
-                            image_file = futures[future]
-                            try:
-                                text = future.result()
-                                organized_text = organize_text_with_gpt(text, api_key)
-                                formatted_text = format_text(organized_text)
-                                data.append({"貨號": os.path.splitext(image_file)[0], "圖片內容": text, "文案": formatted_text})
-                            except Exception as exc:
-                                print(f'{image_file} generated an exception: {exc}')
-    
-                            progress = len(data) / total_files
-                            progress_bar.progress(progress)
-                            progress_text.text(f"正在提取圖片文字與撰寫文案: {image_file} ({len(data)}/{total_files})")
-    
-                    progress_bar.empty()
-                    progress_text.empty()
-    
-                    df_text = pd.DataFrame(data)
-                    csv_buffer = io.StringIO()
-                    df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')  
-                    csv_data = csv_buffer.getvalue().encode('utf-8-sig')
-    
-                    zipf.writestr("文字提取結果與文案.csv", csv_data)
-    
-                zip_buffer.seek(0)
-    
-                st.session_state.zip_buffer = zip_buffer.getvalue()
-                st.session_state.zip_file_ready = True
-                st.session_state.df_text = df_text
-                st.session_state.task_completed = True
-
-                if st.session_state.task_completed and st.session_state.zip_file_ready:
-                    st.session_state.df_text = split_columns(st.session_state.df_text)
-                    missing_items = [item for item in texts if item not in st.session_state.df_text['貨號'].unique()]
-                    zip_buffer = io.BytesIO()
-                    with zipfile.ZipFile(zip_buffer, 'w') as zipf:
-                        for img_file in os.listdir(output_dir):
-                            img_path = os.path.join(output_dir, img_file)
-                            zipf.write(img_path, os.path.basename(img_path))
-                            
-                        csv_buffer = io.StringIO()
-                        st.session_state.df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')  
-                        csv_data = csv_buffer.getvalue().encode('utf-8-sig')
-                        zipf.writestr("文字提取結果與文案.csv", csv_data)
+                st.session_state['chat_started'] = False
+                st.session_state['messages_Perplexity'] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
             
-                        if missing_items:
-                            missing_df = pd.DataFrame(missing_items, columns=['無法搜尋到的貨號'])
-                            missing_csv_buffer = io.StringIO()
-                            missing_df.to_csv(missing_csv_buffer, index=False, encoding='utf-8-sig')
-                            missing_csv_data = missing_csv_buffer.getvalue().encode('utf-8-sig')
-                            zipf.writestr("無法搜尋到的貨號.csv", missing_csv_data)
-            
-                    st.session_state.zip_buffer = zip_buffer.getvalue()
-            
-                    def usd_to_twd(usd_amount):
-                        result = convert(base='USD', amount=usd_amount, to=['TWD'])
-                        return result['TWD']
-            
-                    input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
-                    output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
-                    total_cost_usd = input_cost + output_cost
-                    total_cost_twd = usd_to_twd(total_cost_usd)
+            st.session_state['reset_confirmation'] = False
+
+            if st.session_state['model_type'] == 'ChatGPT':
+                if os.path.exists('chat_history_gpt.json'):
+                    os.remove('chat_history_gpt.json')
+            else:
+                if os.path.exists('chat_history_perplexity.json'):
+                    os.remove('chat_history_perplexity.json')
+        else:
+            st.session_state['reset_confirmation'] = False
+
+def cancel_reset_chat():
+    st.session_state['reset_confirmation'] = False
+
+def confirm_reset_chat(confirm_reset=None):
+    if confirm_reset is None:
+        confirm, cancel = st.columns(2)
+        with confirm:
+            st.button("確認", key="confirm_reset", on_click=confirm_reset_chat, args=(True,))
+        with cancel:
+            st.button("取消", key="cancel_reset", on_click=confirm_reset_chat, args=(False,))
+    else:
+        st.session_state['reset_confirmed'] = confirm_reset
+        if st.session_state.get('reset_confirmed'):
+            reset_chat()
+        st.session_state['reset_confirmation'] = False
+        
+with st.sidebar:
+    selected = option_menu("",
+        ["對話",'AI生圖','模型設定','提示詞','頭像'],
+        icons=['chat-dots-fill','palette-fill','gear-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
+        styles={
+            "container": {"padding": "0!important", "background": "#F0F4F8"},
+            "icon": {"padding": "0px 10px 0px 0px !important","color": "#46474A", "font-size": "17px"},
+            "nav-link": {"padding": "7px 0px 7px 15px","font-size": "17px", "text-align": "left", "margin":"3px", "--hover-color": "#E9EEF6","border-radius": "20px"},
+            "nav-link-selected": {"padding": "7px 0px 7px 15px","background": "#B4D7FF", "color": "#041E49","border-radius": "20px"},
+        }
+    )
+    
+    if selected in ["對話", "模型設定"]:
+        model_toggle = st.selectbox("",options=["ChatGPT", "Perplexity"], key="model_type", label_visibility="collapsed")
+        st.write("\n")
+    elif selected == "AI生圖":
+        model_toggle = st.selectbox("",options=["DALL ·E 3", "DALL ·E 2"], key="dalle_model_display", label_visibility="collapsed")
+        st.write("\n")
+    
+
+    if selected =="對話":
+        if st.session_state["model_type"] == "Perplexity":
+            assistant_avatar = assistant_avatar_perplexity
+            perplexity_api_key_input = st.text_input("請輸入 Perplexity API Key", value=st.session_state.get('perplexity_api_key', ''), type="password", key='perplexity_api_key_input', on_change=update_perplexity_api_key)
+        
+        elif st.session_state["model_type"] in ["ChatGPT", "DALL ·E 3", "DALL ·E 2"]:
+            assistant_avatar = assistant_avatar_gpt
+            openai_api_key_input = st.text_input("請輸入 OpenAI API Key", value=st.session_state.get('chatbot_api_key', ''), type="password", key='openai_api_key_input', on_change=update_openai_api_key)
+    
+    if selected == "AI生圖":
+        assistant_avatar = assistant_avatar_gpt
+        openai_api_key_input = st.text_input("請輸入 OpenAI API Key", value=st.session_state.get('chatbot_api_key', ''), type="password", key='openai_api_key_input', on_change=update_openai_api_key)
+        
+    if selected == "AI生圖":
+        dalle_model_map = {"DALL ·E 3": "dall-e-3", "DALL ·E 2": "dall-e-2"}
+        st.session_state["dalle_model"] = dalle_model_map[st.session_state["dalle_model_display"]]
+
+#%% 對話頁面
+async def stream_openai_response():
+    async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
+        if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
+            st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
+            thinking_placeholder.empty()
+    
+        full_response = response_message
+        response_container.markdown(f"""
+            <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
+                <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    {format_message(full_response)} \n </div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": full_response})
+    response_container.empty()
+    message_func(full_response, is_user=False)
+    chat_history_gpt[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
+    save_chat_history(chat_history_gpt, 'ChatGPT')                            
+
+def update_gpt_system_prompt():
+    st.session_state['gpt_system_prompt'] = st.session_state['gpt_system_prompt_input']
+    save_settings({
+        'gpt_system_prompt': st.session_state['gpt_system_prompt']
+    })
+
+def update_perplexity_system_prompt():
+    st.session_state['perplexity_system_prompt'] = st.session_state['perplexity_system_prompt_input']
+    save_settings({
+        'perplexity_system_prompt': st.session_state['perplexity_system_prompt']
+    })
+    
+def update_exported_shortcuts():
+    for exported_shortcut in st.session_state.get('exported_shortcuts', []):
+        for shortcut in st.session_state['shortcuts']:
+            if exported_shortcut['name'] == shortcut['name']:
+                exported_shortcut.update(shortcut)
                 
-                    st.divider()
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
-                    with col2:
-                        ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
-                    with col3:
-                        ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
+def hide_expander():
+    st.session_state['expander_state'] = False
+    st.session_state['active_shortcut'] = None
+    
+if selected == "對話" and 'exported_shortcuts' in st.session_state:
+    api_key_entered = (st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']) or \
+              (st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key'])
+
+    if api_key_entered and 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
+        with st.sidebar.expander('你的提示詞'):
+            for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
+                if shortcut['target'] == 'chat':  
+                    col = st.columns(1)[0]
+                    with col:
+                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#C4DDA7", "color": "#2b2727"}):
+                            st.session_state['active_shortcut'] = shortcut
+
+    if 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
+        with st.sidebar:
+            st.divider()
+            if st.session_state.get('reset_confirmation'):
+                confirm_col, cancel_col = st.columns(2)
+                with confirm_col:
+                    st.button("確認", on_click=reset_chat, args=(True,))
+                with cancel_col:
+                    st.button("取消", on_click=reset_chat, args=(False,))
+            else:
+                st.button("重置對話", on_click=reset_chat)
+
+    if selected == "對話":
+        html_code1 = """
+        <style>
+            .gradient-text {
+                font-size: 55px;
+                font-weight:bold;
+                background: linear-gradient(to right, #5282ED, #9874CE, #D96470);
+                -webkit-background-clip: text;
+                color: transparent;
+                display: inline;
+            }
+        </style>
+        <div class="gradient-text">嗨 ！ 你 好 嗎</div>
+        """
+        st.markdown(html_code1, unsafe_allow_html=True)
+        st.write("\n")
+        
+        if st.session_state['reset_confirmed']:
+            st.session_state['reset_confirmed'] = False
+            
+        if f"messages_{st.session_state['model_type']}" not in st.session_state:
+            st.session_state[f"messages_{st.session_state['model_type']}"] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
+        
+        if not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
+            for msg in st.session_state[f"messages_{st.session_state['model_type']}"]:
+                message_func(msg["content"], is_user=(msg["role"] == "user"))
+
+        if st.session_state['model_type'] == "ChatGPT":
+            if not st.session_state['open_ai_model'] == "DALL-E":
+                prompt = st.chat_input()
+                if prompt:
+                    if not st.session_state['chatbot_api_key']:
+                        message_func("請輸入您的 OpenAI API Key", is_user=False)
+                    else:
+                        st.session_state['chat_started'] = True
+                        client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
+                        st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
+                        message_func(prompt, is_user=True)
+
+                        thinking_placeholder = st.empty()
+                        status_text = "Thinking..."
+                        st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": status_text})
+                        with thinking_placeholder.container():
+                            message_func(status_text, is_user=False)
+
+                        response_container = st.empty()
+                        messages = st.session_state[f"messages_{st.session_state['model_type']}"] + [{"role": "user", "content": prompt}]
+                        full_response = ""
+                        asyncio.run(stream_openai_response())
+
+        if st.session_state['model_type'] == "Perplexity":
+            prompt = st.chat_input()
+            if prompt:
+                if not st.session_state['perplexity_api_key']:
+                    message_func("請輸入您的 Perplexity API Key", is_user=False)
+                else:
+                    st.session_state['chat_started'] = True
+                    st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
+                    message_func(prompt, is_user=True)
+
+                    thinking_placeholder = st.empty()
+                    status_text = "Thinking..."
+                    st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": status_text})
+                    with thinking_placeholder.container():
+                        message_func(status_text, is_user=False)
+
+                    response_container = st.empty()
+                    full_response = ""
+                    history = st.session_state[f"messages_{st.session_state['model_type']}"]
+
+                    for response_message in generate_perplexity_response(
+                            prompt,
+                            history,
+                            st.session_state['perplexity_model'],
+                            st.session_state['temperature'],
+                            st.session_state['top_p'],
+                            st.session_state['presence_penalty'],
+                            st.session_state['max_tokens'],
+                            st.session_state['perplexity_system_prompt'],
+                            st.session_state['language']):
+
+                        if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
+                            st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
+                            thinking_placeholder.empty()
+
+                        full_response = response_message
+                        response_container.markdown(
+                            f"""
+                            <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
+                                <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
+                                <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                                    {full_response} \n </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+
+                    st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": full_response})
+                    response_container.empty()
+                    message_func(full_response, is_user=False)
+                    chat_history_perplexity[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
+                    save_chat_history(chat_history_perplexity, 'Perplexity')
+
+    with st.sidebar:
+        sidebar_placeholder = st.empty()
+        sidebar_placeholder.empty()
+
+    if 'active_shortcut' in st.session_state and st.session_state.get('active_shortcut') is not None and st.session_state['active_shortcut']['target'] == 'chat':
+        shortcut = st.session_state['active_shortcut']
+        inputs = {}
+        form_placeholder = st.empty()
+        with form_placeholder.form(key=f'prompt_template_form_{shortcut["name"]}'):
+            col1, col2 = st.columns(2)
+            for i, component in enumerate(shortcut['components']):
+                with col1 if i % 2 == 0 else col2:
+                    if component['type'] == "text input":
+                        inputs[component['label']] = st.text_input(component['label'], key=f'shortcut_text_input_{i}')
+                    elif component['type'] == "selector":
+                        inputs[component['label']] = st.selectbox(component['label'], component['options'], key=f'shortcut_selector_{i}')
+                    elif component['type'] == "multi selector":
+                        inputs[component['label']] = st.multiselect(component['label'], component['options'], key=f'shortcut_multi_selector_{i}')
+    
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.form_submit_button("取消", on_click=hide_expander):
+                    st.session_state['active_shortcut'] = None
+                    form_placeholder.empty()
+    
+            with col2:
+                提示詞模板 = st.form_submit_button("送出")
+    
+        if 提示詞模板 and not st.session_state['prompt_submitted']:
+            st.session_state['active_shortcut'] = None
+            st.session_state['expander_state'] = False
+            form_placeholder.empty()
+            prompt_template = shortcut['prompt_template'].replace("{", "{{").replace("}", "}}")
+            for key in inputs.keys():
+                prompt_template = prompt_template.replace(f"{{{{{key}}}}}", f"{inputs[key]}")
+            try:
+                prompt = prompt_template.replace("{{", "{").replace("}}", "}")
+                st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
+    
+                asyncio.run(handle_prompt_submission(prompt))
+    
+                st.session_state['prompt_submitted'] = True
+            except KeyError as e:
+                st.error(f"缺少必需的輸入: {e}")
+
+    if 'prompt_submitted' in st.session_state:
+        del st.session_state['prompt_submitted']
+
+#%% 模型設定頁面
+def update_open_ai_model():
+    model_display_names = {"GPT-4o": "gpt-4o", "GPT-4o mini": "gpt-4o-mini"}
+    selected_model = model_display_names[st.session_state['open_ai_model_selection']]
+    st.session_state['open_ai_model'] = selected_model
+    settings['open_ai_model'] = selected_model
+    save_settings(settings)
+    st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
+
+def update_perplexity_model():
+    perplexity_model_display_names = {
+        "Sonar-Large 128k Online": "llama-3.1-sonar-large-128k-online",
+        "Sonar-Large 128k Chat": "llama-3.1-sonar-large-128k-chat",
+    }
+    selected_model = perplexity_model_display_names[st.session_state['perplexity_model_selection']]
+    st.session_state['perplexity_model'] = selected_model
+    settings['perplexity_model'] = selected_model
+    save_settings(settings)
+    st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
+    
+def update_model_params(model_type):
+    if model_type == "ChatGPT":
+        st.session_state['temperature'] = st.session_state['temperature_slider']
+        st.session_state['top_p'] = st.session_state['top_p_slider']
+        st.session_state['presence_penalty'] = st.session_state['presence_penalty_slider']
+        st.session_state['frequency_penalty'] = st.session_state['frequency_penalty_slider']
+        save_settings({
+            'temperature': st.session_state['temperature'],
+            'top_p': st.session_state['top_p'],
+            'presence_penalty': st.session_state['presence_penalty'],
+            'frequency_penalty': st.session_state['frequency_penalty']
+        })
+    elif model_type == "Perplexity":
+        st.session_state['perplexity_temperature'] = st.session_state['perplexity_temperature_slider']
+        st.session_state['perplexity_top_p'] = st.session_state['perplexity_top_p_slider']
+        st.session_state['perplexity_presence_penalty'] = st.session_state['perplexity_presence_penalty_slider']
+        save_settings({
+            'perplexity_temperature': st.session_state['perplexity_temperature'],
+            'perplexity_top_p': st.session_state['perplexity_top_p'],
+            'perplexity_presence_penalty': st.session_state['perplexity_presence_penalty']
+        })
+
+def update_language():
+    if st.session_state['language_input'] != st.session_state['language']:
+        st.session_state['language'] = st.session_state['language_input']
+        save_settings({
+            'language': st.session_state['language']
+        })
+
+def update_max_tokens():
+    if st.session_state['max_tokens_input'] != st.session_state['max_tokens']:
+        st.session_state['max_tokens'] = st.session_state['max_tokens_input']
+        save_settings({
+            'max_tokens': st.session_state['max_tokens']
+        })
+
+def update_slider(key, value):
+    st.session_state[key] = value
+    save_settings({
+        'temperature': st.session_state['temperature'],
+        'top_p': st.session_state['top_p'],
+        'presence_penalty': st.session_state['presence_penalty'],
+        'frequency_penalty': st.session_state['frequency_penalty']
+    })
+
+if selected == "模型設定":
+    col1, col2, col3 = st.columns([2, 2, 1.5])
+    if st.session_state['model_type'] == "ChatGPT":
+        with col1:
+            model_display_names = {"GPT-4o": "gpt-4o", "GPT-4o mini": "gpt-4o-mini"}
+            reverse_mapping = {v: k for k, v in model_display_names.items()}
+            selected_model_key = reverse_mapping.get(st.session_state['open_ai_model'], "GPT-4o")
+            st.selectbox(
+                "選擇 ChatGPT 模型",
+                list(model_display_names.keys()),
+                index=list(model_display_names.keys()).index(selected_model_key),
+                key='open_ai_model_selection',
+                on_change=update_open_ai_model
+            )
+        with col2:
+            st.text_input(
+                "指定使用的語言",
+                key='language_input',
+                value=st.session_state.get('language', ''),
+                on_change=update_language
+            )
+        with col3:
+            st.number_input(
+                "Tokens 上限",
+                key='max_tokens_input',
+                min_value=0,
+                value=st.session_state.get('max_tokens', 1000),
+                on_change=update_max_tokens
+            )
+      
+        st.text_area(
+            "角色設定",
+            value=st.session_state.get('gpt_system_prompt', ''),
+            placeholder="你是一個友好且資深的英文老師。你的目標是幫助使用者提高他們的語言能力，並且用簡單易懂的方式解釋概念。你應該耐心回答問題，並鼓勵學生提出更多問題。",
+            key="gpt_system_prompt_input",
+            on_change=update_gpt_system_prompt,
+            height=290
+        )
+
+        with st.expander("模型參數", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.slider(
+                    "選擇 Temperature",
+                    min_value=0.0,
+                    max_value=2.0,
+                    step=0.1,
+                    value=st.session_state['temperature'],
+                    key='temperature_slider',
+                    on_change=update_model_params,
+                    args=("ChatGPT",)
+                )
+                st.slider(
+                    "選擇 Presence Penalty",
+                    min_value=-2.0,
+                    max_value=2.0,
+                    step=0.1,
+                    value=st.session_state['presence_penalty'],
+                    key='presence_penalty_slider',
+                    on_change=update_model_params,
+                    args=("ChatGPT",)
+                )
+            with col2:
+                st.slider(
+                    "選擇 Top P",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.1,
+                    value=st.session_state['top_p'],
+                    key='top_p_slider',
+                    on_change=update_model_params,
+                    args=("ChatGPT",)
+                )
+                st.slider(
+                    "選擇 Frequency Penalty",
+                    min_value=-2.0,
+                    max_value=2.0,
+                    step=0.1,
+                    value=st.session_state['frequency_penalty'],
+                    key='frequency_penalty_slider',
+                    on_change=update_model_params,
+                    args=("ChatGPT",)
+                )
+
+    elif st.session_state['model_type'] == "Perplexity":
+        with col1:
+            perplexity_model_display_names = {
+                "Sonar-Large 128k Online": "llama-3.1-sonar-large-128k-online",
+                "Sonar-Large 128k Chat": "llama-3.1-sonar-large-128k-chat",
+            }
+            reverse_mapping = {v: k for k, v in perplexity_model_display_names.items()}
+            selected_model_key = reverse_mapping.get(st.session_state['perplexity_model'], "Sonar-Large 128k Online")
+            st.selectbox(
+                "選擇 Sonar 或 Llama3 模型",
+                list(perplexity_model_display_names.keys()),
+                index=list(perplexity_model_display_names.keys()).index(selected_model_key),
+                key='perplexity_model_selection',
+                on_change=update_perplexity_model
+            )
+        with col2:
+            st.text_input(
+                "指定使用的語言",
+                key='language_input',
+                value=st.session_state.get('language', ''),
+                on_change=update_language
+            )
+        with col3:
+            st.number_input(
+                "Tokens 上限",
+                key='max_tokens_input',
+                min_value=0,
+                value=st.session_state.get('max_tokens', 1000),
+                on_change=update_max_tokens
+            )
+  
+        st.text_area(
+            "角色設定",
+            value=st.session_state.get('perplexity_system_prompt', ''),
+            placeholder="你是一個專業的科技支援工程師。你的目標是幫助用戶解決各種技術問題，無論是硬體還是軟體問題。你應該詳細解釋解決方案，並確保用戶理解每一步驟。",
+            key="perplexity_system_prompt_input",
+            on_change=update_perplexity_system_prompt,
+            height=290
+        )
+        with st.expander("模型參數", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.slider(
+                    "選擇 Temperature",
+                    min_value=0.0,
+                    max_value=2.0,
+                    step=0.1,
+                    value=st.session_state['perplexity_temperature'],
+                    key='perplexity_temperature_slider',
+                    on_change=update_model_params,
+                    args=("Perplexity",)
+                )
+            with col2:
+                st.slider(
+                    "選擇 Top P",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.1,
+                    value=st.session_state['perplexity_top_p'],
+                    key='perplexity_top_p_slider',
+                    on_change=update_model_params,
+                    args=("Perplexity",)
+                )
+
+            st.slider(
+                "選擇 Presence Penalty",
+                min_value=-2.0,
+                max_value=2.0,
+                step=0.1,
+                value=st.session_state['perplexity_presence_penalty'],
+                key='perplexity_presence_penalty_slider',
+                on_change=update_model_params,
+                args=("Perplexity",)
+            )
+
+    settings['open_ai_model'] = st.session_state['open_ai_model']
+    settings['perplexity_model'] = st.session_state['perplexity_model']
+    settings['perplexity_temperature'] = st.session_state['perplexity_temperature']
+    settings['perplexity_top_p'] = st.session_state['perplexity_top_p']
+    settings['perplexity_presence_penalty'] = st.session_state['perplexity_presence_penalty']
+    settings['perplexity_max_tokens'] = st.session_state['max_tokens']
+    settings['perplexity_system_prompt'] = st.session_state['perplexity_system_prompt']
+    settings['gpt_system_prompt'] = st.session_state['gpt_system_prompt']
+    settings['language'] = st.session_state['language']
+    settings['temperature'] = st.session_state['temperature']
+    settings['top_p'] = st.session_state['top_p']
+    settings['presence_penalty'] = st.session_state['presence_penalty']
+    settings['frequency_penalty'] = st.session_state['frequency_penalty']
+    settings['max_tokens'] = st.session_state['max_tokens']
+    save_settings(settings)
+
+#%% AI生圖頁面
+def update(action):
+    if action == 'reset':
+        st.session_state['reset_confirmation'] = True
+    elif action == 'confirm':
+        st.session_state["messages_DALLE"] = [{"role": "assistant", "content": "今天想創造點什麼？"}]
+        chat_history_dalle['DALL-E'] = st.session_state["messages_DALLE"]
+        save_chat_history(chat_history_dalle, 'DALL-E')
+        st.session_state['reset_confirmation'] = False
+    elif action == 'cancel':
+        st.session_state['reset_confirmation'] = False
+
+async def generate_image_from_prompt(prompt, model):
+    client = OpenAI(api_key=st.session_state['chatbot_api_key'])
+
+    try:
+        response = client.images.generate(
+            model=model,
+            prompt=prompt,
+            size="1024x1024",
+            n=1
+        )
+        image_url = response.data[0].url
+
+        response = requests.get(image_url)
+
+        img_base64 = base64.b64encode(BytesIO(response.content).getvalue()).decode("utf-8")
+
+        return img_base64
+
+    except Exception as e:
+        st.error(f"圖片生成失敗：{str(e)}")
+        return None
+    
+async def handle_image_generation(prompt):
+    img_base64 = await generate_image_from_prompt(prompt, st.session_state['dalle_model'])
+    if img_base64:
+        thinking_placeholder.empty()
+        st.session_state["messages_DALLE"] = [msg for msg in st.session_state["messages_DALLE"] if msg["content"] != status_text]
+        st.session_state["messages_DALLE"].append({"role": "assistant", "content": f'<img src="data:image/png;base64,{img_base64}" alt="Generated Image" style="max-width: 100%;">'})
+        response_container.empty()
+        message_func(f'<img src="data:image/png;base64,{img_base64}" alt="Generated Image" style="max-width: 100%;">', is_user=False)
+        chat_history_dalle['DALL-E'] = st.session_state["messages_DALLE"]
+        save_chat_history(chat_history_dalle, 'DALL-E')
+
+if selected == "AI生圖":
+    if 'messages_DALLE' not in st.session_state:
+        st.session_state['messages_DALLE'] = chat_history_dalle.get('DALL-E', [{"role": "assistant", "content": "今天想創造點什麼？"}])
+
+    for msg in st.session_state["messages_DALLE"]:
+        message_func(msg["content"], is_user=(msg["role"] == "user"))
+
+    if 'exported_shortcuts' in st.session_state:
+        with st.sidebar.expander('你的提示詞',expanded=False):
+            for idx, shortcut in enumerate(st.session_state['exported_shortcuts']):
+                if shortcut['target'] == 'image':  
+                    col = st.columns(1)[0]
+                    with col:
+                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#C4DDA7", "color": "#2b2727"}):
+                            st.session_state['active_shortcut'] = shortcut
+
+    prompt = st.chat_input()
+    if prompt:
+        if not st.session_state['chatbot_api_key']:
+            message_func("請輸入您的 OpenAI API Key", is_user=False)
+        else:
+            st.session_state["messages_DALLE"].append({"role": "user", "content": prompt})
+            message_func(prompt, is_user=True)
+
+            thinking_placeholder = st.empty()
+            status_text = "圖片生成中..."
+            st.session_state["messages_DALLE"].append({"role": "assistant", "content": status_text})
+            with thinking_placeholder.container():
+                message_func(status_text, is_user=False)
+
+            response_container = st.empty()
+
+            asyncio.run(handle_image_generation(prompt))
+            st.session_state['prompt_submitted'] = True
+
+    if 'active_shortcut' in st.session_state and st.session_state.get('active_shortcut') is not None and st.session_state['active_shortcut']['target'] == 'image':
+        shortcut = st.session_state['active_shortcut']
+        inputs = {}
+        form_placeholder = st.empty()
+        with form_placeholder.form(key=f'prompt_template_form_{shortcut["name"]}'):
+            col1, col2 = st.columns(2)
+            for i, component in enumerate(shortcut['components']):
+                with col1 if i % 2 == 0 else col2:
+                    if component['type'] == "text input":
+                        inputs[component['label']] = st.text_input(component['label'], key=f'shortcut_text_input_{i}')
+                    elif component['type'] == "selector":
+                        inputs[component['label']] = st.selectbox(component['label'], component['options'], key=f'shortcut_selector_{i}')
+                    elif component['type'] == "multi selector":
+                        inputs[component['label']] = st.multiselect(component['label'], component['options'], key=f'shortcut_multi_selector_{i}')
+    
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.form_submit_button("取消", on_click=hide_expander):
+                    st.session_state['active_shortcut'] = None
+                    form_placeholder.empty()
+    
+            with col2:
+                提示詞模板 = st.form_submit_button("送出")
+    
+        if 提示詞模板 and not st.session_state.get('prompt_submitted', False):
+            st.session_state['active_shortcut'] = None
+            st.session_state['expander_state'] = False
+            form_placeholder.empty()
+            prompt_template = shortcut['prompt_template'].replace("{", "{{").replace("}", "}}")
+            for key in inputs.keys():
+                prompt_template = prompt_template.replace(f"{{{{{key}}}}}", f"{inputs[key]}")
+            try:
+                prompt = prompt_template.replace("{{", "{").replace("}}", "}")
+                st.session_state["messages_DALLE"].append({"role": "user", "content": prompt})
+                message_func(prompt, is_user=True)
+
+                thinking_placeholder = st.empty()
+                status_text = "圖片生成中..."
+                st.session_state["messages_DALLE"].append({"role": "assistant", "content": status_text})
+                with thinking_placeholder.container():
+                    message_func(status_text, is_user=False)
+    
+                response_container = st.empty()
+    
+                asyncio.run(handle_image_generation(prompt))
+                st.session_state['prompt_submitted'] = True 
+            except KeyError as e:
+                st.error(f"缺少必需的輸入: {e}")
+    
+    if 'prompt_submitted' in st.session_state:
+        del st.session_state['prompt_submitted']
                 
-                    with st.container(height=400, border=None):
-                        st.write("##### 成果預覽")
-                        ui.table(st.session_state.df_text)
-                    
-                    st.download_button(
-                        label="下載 ZIP 檔案",
-                        data=st.session_state.zip_buffer,
-                        file_name="output.zip",
-                        mime="application/zip"
-                    )
-                    
-if __name__ == "__main__":
-    main()
+    with st.sidebar:
+        st.divider()
+        if 'reset_confirmation' not in st.session_state:
+            st.session_state['reset_confirmation'] = False
+
+        if st.session_state['reset_confirmation']:
+            confirm_col, cancel_col = st.columns(2)
+            with confirm_col:
+                st.button("確認", key="confirm_reset_dalle", on_click=lambda: update('confirm'))
+            with cancel_col:
+                st.button("取消", key="cancel_reset_dalle", on_click=lambda: update('cancel'))
+        else:
+            st.button("重置對話", key="reset_chat_dalle", on_click=lambda: update('reset'))
+
+#%% 提示詞頁面
+def reset_new_component():
+    st.session_state['new_component'] = {"label": "", "options": ""}
+
+def add_shortcut():
+    if len(st.session_state['shortcuts']) >= 8:
+        st.markdown("<div class='custom-warning'>已達到 Shortcut 數量上限（8 個）</div>", unsafe_allow_html=True)
+        time.sleep(1)
+        st.rerun()
+    else:
+        existing_names = [shortcut['name'] for shortcut in st.session_state['shortcuts']]
+        base_name = f"Shortcut {len(st.session_state['shortcuts']) + 1}"
+        new_name = base_name
+        counter = 1
+        while new_name in existing_names:
+            counter += 1
+            new_name = f"{base_name} ({counter})"
+
+        new_shortcut = {
+            "name": new_name,
+            "components": [],
+            "prompt_template": ""
+        }
+        st.session_state['shortcuts'].append(new_shortcut)
+        st.session_state['shortcut_names'].append(new_shortcut["name"])
+        st.session_state['current_shortcut'] = len(st.session_state['shortcuts']) - 1
+        save_shortcuts()
+
+def delete_shortcut(index):
+    if len(st.session_state['shortcuts']) > 0:
+        deleted_shortcut = st.session_state['shortcuts'].pop(index)
+        st.session_state['shortcut_names'].pop(index)
+        st.session_state['current_shortcut'] = max(0, index - 1)
+        
+        st.session_state['exported_shortcuts'] = [
+            shortcut for shortcut in st.session_state['exported_shortcuts']
+            if shortcut['name'] != deleted_shortcut['name']
+        ]
+        
+        del st.session_state[f'prompt_template_{index}']
+        for i, component in enumerate(deleted_shortcut['components']):
+            if component['type'] == "text input":
+                del st.session_state[f'text_input_{index}_{i}']
+            elif component['type'] == "selector":
+                del st.session_state[f'selector_{index}_{i}']
+            elif component['type'] == "multi selector":
+                del st.session_state[f'multi_selector_{index}_{i}']
+        
+        if len(st.session_state['shortcuts']) == 0:
+            add_shortcut() 
+        
+        save_shortcuts()
+        st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
+
+def confirm_delete_shortcut(index=None, confirm_delete=None):
+    if confirm_delete is None:
+        st.session_state['delete_confirmation'] = index
+    else:
+        if confirm_delete:
+            delete_shortcut(index)
+            st.session_state['delete_confirmation'] = None
+        else:
+            st.session_state['delete_confirmation'] = None
+            
+def cancel_delete_shortcut():
+    st.session_state['delete_confirmation'] = None
+    
+def update_prompt_template(idx):
+    st.session_state['shortcuts'][idx]['prompt_template'] = st.session_state[f'prompt_template_{idx}']
+    update_exported_shortcuts()
+    save_shortcuts()
+
+def update_shortcut_name(idx):
+    new_name = st.session_state[f'shortcut_name_{idx}']
+    if new_name != st.session_state['shortcuts'][idx]['name']:
+        old_name = st.session_state['shortcuts'][idx]['name']
+        st.session_state['shortcuts'][idx]['name'] = new_name
+        for exported_shortcut in st.session_state['exported_shortcuts']:
+            if exported_shortcut['name'] == old_name:
+                exported_shortcut['name'] = new_name
+        save_shortcuts()
+        st.session_state['update_trigger'] = not st.session_state.get('update_trigger', False)
+
+if selected == "提示詞":
+    with st.sidebar:
+        st.divider()
+        if st.button("新增提示詞"):
+            add_shortcut()
+
+    if st.session_state['shortcuts']:
+        tabs = st.tabs([shortcut['name'] for shortcut in st.session_state['shortcuts']])
+        for idx, tab in enumerate(tabs):
+            with tab:
+                st.session_state['current_shortcut'] = idx
+                shortcut = st.session_state['shortcuts'][idx]
+
+                if f'prompt_template_{idx}' not in st.session_state:
+                    st.session_state[f'prompt_template_{idx}'] = shortcut['prompt_template']
+
+                col1, col2 = st.columns([1, 2.5])
+                with col1:
+                    component_type = st.selectbox("選擇要新增的元件類型", ["文字輸入", "選單", "多選選單"], key=f'component_type_{idx}')
+                with col2:
+                    new_name = st.text_input("提示詞名稱", value=shortcut['name'], key=f'shortcut_name_{idx}', on_change=update_shortcut_name, args=(idx,))
+                    if new_name.strip() == "":
+                        st.warning("名稱不能為空")
+
+                if component_type == "文字輸入":
+                    with st.expander("建立文字變數", expanded=True):
+                        label = st.text_input("變數名稱", key=f'text_input_label_{idx}')
+                        if st.button("新增 文字輸入", key=f'add_text_input_{idx}'):
+                            if label:
+                                shortcut['components'].append({"type": "text input", "label": label})
+                                reset_new_component()
+                                update_exported_shortcuts()
+                                save_shortcuts()
+                                st.success("已成功新增")
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.warning("標籤為必填項目")
+                                time.sleep(1)
+                                st.rerun()
+
+                elif component_type == "選單":
+                    with st.expander("建立選單變數", expanded=True):
+                        label = st.text_input("變數名稱", key=f'selector_label_{idx}')
+                        options = st.text_area("輸入選項（每行一個）", key=f'selector_options_{idx}').split("\n")
+                        if st.button("新增 選單", key=f'add_selector_{idx}'):
+                            if label and options and all(option.strip() for option in options):
+                                shortcut['components'].append({"type": "selector", "label": label, "options": options})
+                                reset_new_component()
+                                update_exported_shortcuts()
+                                save_shortcuts()
+                                st.success("已成功新增")
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.warning("標籤和選項為必填項目")
+                                time.sleep(1)
+                                st.rerun()
+
+                elif component_type == "多選選單":
+                    with st.expander("建立多選選單變數", expanded=True):
+                        label = st.text_input("變數名稱", key=f'multi_selector_label_{idx}')
+                        options = st.text_area("輸入選項（每行一個）", key=f'multi_selector_options_{idx}').split("\n")
+                        if st.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
+                            if label and options and all(option.strip() for option in options):
+                                shortcut['components'].append({"type": "multi selector", "label": label, "options": options})
+                                reset_new_component()
+                                update_exported_shortcuts()
+                                save_shortcuts()
+                                st.success("已成功新增")
+                                time.sleep(1)
+                                st.rerun()
+
+                with st.expander("你的元件組合",expanded=False):
+                    cols = st.columns(4)
+                    for i, component in enumerate(shortcut['components']):
+                        col = cols[i % 4]
+                        with col:
+                            if component['type'] == "text input":
+                                st.text_input(component['label'], key=f'text_input_{idx}_{i}')
+                            elif component['type'] == "selector":
+                                st.selectbox(component['label'], component['options'], key=f'selector_{idx}_{i}')
+                            elif component['type'] == "multi selector":
+                                st.multiselect(component['label'], component['options'], key=f'multi_selector_{idx}_{i}')
+                            if st.button("刪除", key=f'delete_{idx}_{i}'):
+                                del shortcut['components'][i]
+                                update_exported_shortcuts()
+                                save_shortcuts()
+                                st.rerun()
+
+                st.divider()
+                st.write("##### 自訂提示詞公式")
+                st.write("\n")
+                col1, col2, col3 = st.columns([2, 0.1, 1.8])
+                with col1:
+                    st.text_area("", height=350, placeholder="用{ }代表標籤變數", key=f'prompt_template_{idx}', label_visibility="collapsed", on_change=update_prompt_template, args=(idx,))
+                with col3:
+                    st.write("##### 提示詞預覽")
+                    inputs = {}
+                    for i, component in enumerate(shortcut['components']):
+                        if component['type'] == "text input":
+                            inputs[component['label']] = st.session_state.get(f'text_input_{idx}_{i}', "")
+                        elif component['type'] == "selector":
+                            inputs[component['label']] = st.session_state.get(f'selector_{idx}_{i}', "")
+                        elif component['type'] == "multi selector":
+                            inputs[component['label']] = st.session_state.get(f'multi_selector_{idx}_{i}', [])
+                
+                    prompt_template = st.session_state[f'prompt_template_{idx}'].replace("{", "{{").replace("}", "}}")
+                    for key in inputs.keys():
+                        prompt_template = prompt_template.replace(f"{{{{{key}}}}}", f"{inputs[key]}")
+                
+                    try:
+                        prompt = prompt_template.replace("{{", "{").replace("}}", "}")
+                        prompt_with_line_breaks = prompt.replace("\n", "<br>")
+                        st.markdown(prompt_with_line_breaks.replace('\n','\n'), unsafe_allow_html=True)
+                    except KeyError as e:
+                        st.error(f"缺少必需的輸入: {e}")
+                st.write("\n")
+                
+                if shortcut['components'] and st.session_state[f'prompt_template_{idx}'].strip():
+                    if len(st.session_state.get('exported_shortcuts', [])) < 4 and shortcut['name'] not in [s['name'] for s in st.session_state.get('exported_shortcuts', [])]:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("輸出到對話頁面", key=f'export_to_chat_{idx}'):
+                                if 'exported_shortcuts' not in st.session_state:
+                                    st.session_state['exported_shortcuts'] = []
+                                shortcut['target'] = 'chat'
+                                st.session_state['exported_shortcuts'].append(shortcut)
+                                save_shortcuts()
+                                st.success("成功輸出，請至對話頁查看")
+                                time.sleep(1)
+                                st.session_state['exported_shortcuts'].append(shortcut['name'])
+                                st.rerun()
+                        with col2:
+                            if st.button("輸出到AI生圖頁", key=f'export_to_image_{idx}'):
+                                if 'exported_shortcuts' not in st.session_state:
+                                    st.session_state['exported_shortcuts'] = []
+                                shortcut['target'] = 'image'
+                                st.session_state['exported_shortcuts'].append(shortcut)
+                                save_shortcuts()
+                                st.success("成功輸出，請至AI生圖頁查看")
+                                time.sleep(1)
+                                st.session_state['exported_shortcuts'].append(shortcut['name'])
+                                st.rerun()
+
+                if len(st.session_state['shortcuts']) > 0:
+                    tab_name = shortcut['name']
+                    if st.session_state.get('delete_confirmation') == idx:
+                        confirm_col, cancel_col = st.columns(2)
+                        with confirm_col:
+                            st.button("確認", key=f'confirm_delete_{idx}', on_click=confirm_delete_shortcut, args=(idx, True))
+                        with cancel_col:
+                            st.button("取消", key=f'cancel_delete_{idx}', on_click=confirm_delete_shortcut, args=(None, False))
+                    else:
+                        if st.button(f"刪除 {tab_name}", key=f'delete_tab_{idx}', on_click=lambda: confirm_delete_shortcut(idx)):
+                            st.session_state['delete_confirmation'] = idx
+
+#%% 頭像頁面
+def select_avatar(name, image):
+    if st.session_state['user_avatar'] != image:
+        st.session_state['user_avatar'] = image
+        settings['user_avatar'] = image
+        save_settings(settings)
+        st.session_state['avatar_updated'] = True
+
+def display_avatars():
+    cols = st.columns(6)
+    for i, (name, image) in enumerate(avatars.items()):
+        with cols[i % 6]:
+            st.image(f"data:image/png;base64,{image}", use_column_width=True)
+            st.button("選擇", key=name, on_click=select_avatar, args=(name, image))
+
+if selected == "頭像":
+    st.write("\n")
+    st.markdown(f"""
+        <div style='text-align: center;'>
+            <div style='display: inline-block; border-radius: 60%; overflow: hidden; border: 0px; background: linear-gradient(-135deg, #35FAF9 0%, rgba(124, 45, 231, 0.8) 100%);'>
+                <img src="data:image/png;base64,{st.session_state['user_avatar']}" style='width: 150px; border-radius: 50%;'/>
+            </div>
+            <p>\n</p>
+        </div>
+    """, unsafe_allow_html=True)
+    st.write("\n")
+    st.write("\n")
+    display_avatars()
+
+    settings['user_avatar'] = st.session_state['user_avatar']
+    save_settings(settings)
