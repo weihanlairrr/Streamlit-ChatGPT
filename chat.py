@@ -1,3 +1,4 @@
+
 #%% 導入套件
 import streamlit as st
 import base64
@@ -454,7 +455,7 @@ async def handle_prompt_submission(prompt):
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                    <div class="message-container" style="background: #f5f5f5; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {full_response} \n </div>
                 </div>
                 """,
@@ -503,7 +504,7 @@ async def handle_prompt_submission(prompt):
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                    <div class="message-container" style="background: #f5f5f5; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {full_response} \n </div>
                 </div>
                 """,
@@ -640,7 +641,7 @@ def message_func(text, is_user=False):
         )
     else:
         message_alignment = "flex-start"
-        message_bg_color = "#f5f5f5"
+        message_bg_color = "#F0F4F8"
         avatar_class = "bot-avatar"
         avatar_size = "width: 45px; height: 28px;"
         if assistant_avatar == assistant_avatar_perplexity:
@@ -741,7 +742,7 @@ with st.sidebar:
         ["對話",'AI生圖','模型設定','提示詞','頭像'],
         icons=['chat-dots-fill','palette-fill','gear-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
         styles={
-            "container": {"padding": "0!important", "background": "#f5f5f5"},
+            "container": {"padding": "0!important", "background": "#F0F4F8"},
             "icon": {"padding": "0px 10px 0px 0px !important","color": "#46474A", "font-size": "17px"},
             "nav-link": {"padding": "7px 0px 7px 15px","font-size": "17px", "text-align": "left", "margin":"3px", "--hover-color": "#E9EEF6","border-radius": "20px"},
             "nav-link-selected": {"padding": "7px 0px 7px 15px","background": "#B4D7FF", "color": "#041E49","border-radius": "20px"},
@@ -750,9 +751,10 @@ with st.sidebar:
     
     if selected in ["對話", "模型設定"]:
         model_toggle = st.selectbox("",options=["ChatGPT", "Perplexity"], key="model_type", label_visibility="collapsed")
+        st.write("\n")
     elif selected == "AI生圖":
         model_toggle = st.selectbox("",options=["DALL ·E 3", "DALL ·E 2"], key="dalle_model_display", label_visibility="collapsed")
-    
+        st.write("\n")
 
     if selected =="對話":
         if st.session_state["model_type"] == "Perplexity":
@@ -782,7 +784,7 @@ async def stream_openai_response():
         response_container.markdown(f"""
             <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                 <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                <div class="message-container" style="background: #f5f5f5; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                     {format_message(full_response)} \n </div>
             </div>
         """, unsafe_allow_html=True)
@@ -791,7 +793,7 @@ async def stream_openai_response():
     response_container.empty()
     message_func(full_response, is_user=False)
     chat_history_gpt[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
-    save_chat_history(chat_history_gpt, 'ChatGPT')                            
+    save_chat_history(chat_history_gpt, 'ChatGPT')                                                   
 
 def update_gpt_system_prompt():
     st.session_state['gpt_system_prompt'] = st.session_state['gpt_system_prompt_input']
@@ -914,7 +916,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                             f"""
                             <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                                 <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                                <div class="message-container" style="background: #f5f5f5; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                                <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                                     {full_response} \n </div>
                             </div>
                             """,
@@ -1467,12 +1469,11 @@ if selected == "提示詞":
                     new_name = st.text_input("提示詞名稱", value=shortcut['name'], key=f'shortcut_name_{idx}', on_change=update_shortcut_name, args=(idx,))
                     if new_name.strip() == "":
                         st.warning("名稱不能為空")
-                        
+
                 if component_type == "文字輸入":
                     with st.expander("建立文字變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'text_input_label_{idx}')
-                        col3,col4 =st.columns([1,2])
-                        if col3.button("新增 文字輸入", key=f'add_text_input_{idx}'):
+                        if st.button("新增 文字輸入", key=f'add_text_input_{idx}'):
                             if label:
                                 shortcut['components'].append({"type": "text input", "label": label})
                                 reset_new_component()
@@ -1490,8 +1491,7 @@ if selected == "提示詞":
                     with st.expander("建立選單變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'selector_label_{idx}')
                         options = st.text_area("輸入選項（每行一個）", key=f'selector_options_{idx}').split("\n")
-                        col3,col4 =st.columns([1,2])
-                        if col3.button("新增 選單", key=f'add_selector_{idx}'):
+                        if st.button("新增 選單", key=f'add_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "selector", "label": label, "options": options})
                                 reset_new_component()
@@ -1509,8 +1509,7 @@ if selected == "提示詞":
                     with st.expander("建立多選選單變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'multi_selector_label_{idx}')
                         options = st.text_area("輸入選項（每行一個）", key=f'multi_selector_options_{idx}').split("\n")
-                        col3,col4 =st.columns([1,2])
-                        if col3.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
+                        if st.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "multi selector", "label": label, "options": options})
                                 reset_new_component()
