@@ -1470,10 +1470,10 @@ if selected == "提示詞":
                     if new_name.strip() == "":
                         st.warning("名稱不能為空")
                         
-                col3,col4 =st.columns([1,2])
                 if component_type == "文字輸入":
                     with st.expander("建立文字變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'text_input_label_{idx}')
+                        col3,col4 =st.columns([1,2])
                         if col3.button("新增 文字輸入", key=f'add_text_input_{idx}'):
                             if label:
                                 shortcut['components'].append({"type": "text input", "label": label})
@@ -1492,6 +1492,7 @@ if selected == "提示詞":
                     with st.expander("建立選單變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'selector_label_{idx}')
                         options = st.text_area("輸入選項（每行一個）", key=f'selector_options_{idx}').split("\n")
+                        col3,col4 =st.columns([1,2])
                         if col3.button("新增 選單", key=f'add_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "selector", "label": label, "options": options})
@@ -1510,6 +1511,7 @@ if selected == "提示詞":
                     with st.expander("建立多選選單變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'multi_selector_label_{idx}')
                         options = st.text_area("輸入選項（每行一個）", key=f'multi_selector_options_{idx}').split("\n")
+                        col3,col4 =st.columns([1,2])
                         if col3.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "multi selector", "label": label, "options": options})
