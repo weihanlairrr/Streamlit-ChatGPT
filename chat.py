@@ -843,22 +843,6 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 st.button("重置對話", on_click=reset_chat)
 
     if selected == "對話":
-        html_code1 = """
-        <style>
-            .gradient-text {
-                font-size: 55px;
-                font-weight:bold;
-                background: linear-gradient(to right, #5282ED, #9874CE, #D96470);
-                -webkit-background-clip: text;
-                color: transparent;
-                display: inline;
-            }
-        </style>
-        <div class="gradient-text">嗨 ！ 你 好 嗎</div>
-        """
-        st.markdown(html_code1, unsafe_allow_html=True)
-        st.write("\n")
-        
         if st.session_state['reset_confirmed']:
             st.session_state['reset_confirmed'] = False
             
