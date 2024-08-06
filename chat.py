@@ -741,7 +741,7 @@ with st.sidebar:
         ["對話",'AI生圖','模型設定','提示詞','頭像'],
         icons=['chat-dots-fill','palette-fill','gear-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
         styles={
-            "container": {"padding": "0!important", "background": "#F0F4F8"},
+            "container": {"padding": "0!important", "background": "#f5f5f5"},
             "icon": {"padding": "0px 10px 0px 0px !important","color": "#46474A", "font-size": "17px"},
             "nav-link": {"padding": "7px 0px 7px 15px","font-size": "17px", "text-align": "left", "margin":"3px", "--hover-color": "#E9EEF6","border-radius": "20px"},
             "nav-link-selected": {"padding": "7px 0px 7px 15px","background": "#B4D7FF", "color": "#041E49","border-radius": "20px"},
@@ -750,10 +750,8 @@ with st.sidebar:
     
     if selected in ["對話", "模型設定"]:
         model_toggle = st.selectbox("",options=["ChatGPT", "Perplexity"], key="model_type", label_visibility="collapsed")
-        st.write("\n")
     elif selected == "AI生圖":
         model_toggle = st.selectbox("",options=["DALL ·E 3", "DALL ·E 2"], key="dalle_model_display", label_visibility="collapsed")
-        st.write("\n")
     
 
     if selected =="對話":
