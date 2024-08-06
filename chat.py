@@ -138,20 +138,19 @@ def init_session_state():
 
     if 'reset_triggered' in st.session_state and st.session_state['reset_triggered']:
         if st.session_state['model_type'] == 'ChatGPT':
-            st.session_state['messages_ChatGPT'] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
+            st.session_state['messages_ChatGPT'] = []
         else:
-            st.session_state['messages_Perplexity'] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
-    
+            st.session_state['messages_Perplexity'] = []
         st.session_state['reset_triggered'] = False  
     else:
         if "messages_ChatGPT" not in st.session_state:
             st.session_state["messages_ChatGPT"] = chat_history_gpt.get('ChatGPT', [])
             if not st.session_state["messages_ChatGPT"]:
-                st.session_state["messages_ChatGPT"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
+                st.session_state["messages_ChatGPT"] = []
         if "messages_Perplexity" not in st.session_state:
             st.session_state["messages_Perplexity"] = chat_history_perplexity.get('Perplexity', [])
             if not st.session_state["messages_Perplexity"]:
-                st.session_state["messages_Perplexity"] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
+                st.session_state["messages_Perplexity"] = []
     
     if 'reset_confirmed' not in st.session_state:
         st.session_state['reset_confirmed'] = False
@@ -454,7 +453,7 @@ async def handle_prompt_submission(prompt):
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                    <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: #f5f5f5; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {full_response} \n </div>
                 </div>
                 """,
@@ -503,7 +502,7 @@ async def handle_prompt_submission(prompt):
                 f"""
                 <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                     <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                    <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                    <div class="message-container" style="background: #F5F5F5; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                         {full_response} \n </div>
                 </div>
                 """,
@@ -640,7 +639,7 @@ def message_func(text, is_user=False):
         )
     else:
         message_alignment = "flex-start"
-        message_bg_color = "#F0F4F8"
+        message_bg_color = "#F5F5F5"
         avatar_class = "bot-avatar"
         avatar_size = "width: 45px; height: 28px;"
         if assistant_avatar == assistant_avatar_perplexity:
@@ -687,7 +686,7 @@ def update_openai_api_key():
         settings['chatbot_api_key'] = st.session_state['chatbot_api_key']
         save_settings(settings)
         if not st.session_state['chat_started']:
-            st.session_state["messages_ChatGPT"][0]['content'] = "請問需要什麼協助？"
+            st.session_state["messages_ChatGPT"][0]['content'] = []
 
 def update_perplexity_api_key():
     if st.session_state['perplexity_api_key_input'] != st.session_state['perplexity_api_key']:
@@ -695,7 +694,7 @@ def update_perplexity_api_key():
         settings['perplexity_api_key'] = st.session_state['perplexity_api_key']
         save_settings(settings)
         if not st.session_state['chat_started']:
-            st.session_state["messages_Perplexity"][0]['content'] = "請問需要什麼協助？"
+            st.session_state["messages_Perplexity"][0]['content'] = []
 
 def reset_chat(confirm_reset=None):
     if confirm_reset is None:
@@ -704,10 +703,10 @@ def reset_chat(confirm_reset=None):
         if confirm_reset:
             if st.session_state['model_type'] == 'ChatGPT':
                 st.session_state['chat_started'] = False
-                st.session_state['messages_ChatGPT'] = [{"role": "assistant", "content": "請問需要什麼協助？" }]
+                st.session_state['messages_ChatGPT'] = []
             else:
                 st.session_state['chat_started'] = False
-                st.session_state['messages_Perplexity'] = [{"role": "assistant", "content": "請問需要什麼協助？"}]
+                st.session_state['messages_Perplexity'] = []
             
             st.session_state['reset_confirmation'] = False
 
@@ -741,7 +740,7 @@ with st.sidebar:
         ["對話",'AI生圖','模型設定','提示詞','頭像'],
         icons=['chat-dots-fill','palette-fill','gear-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
         styles={
-            "container": {"padding": "0!important", "background": "#F0F4F8"},
+            "container": {"padding": "0!important", "background": "#F5F5F5"},
             "icon": {"padding": "0px 10px 0px 0px !important","color": "#46474A", "font-size": "17px"},
             "nav-link": {"padding": "7px 0px 7px 15px","font-size": "17px", "text-align": "left", "margin":"3px", "--hover-color": "#E9EEF6","border-radius": "20px"},
             "nav-link-selected": {"padding": "7px 0px 7px 15px","background": "#B4D7FF", "color": "#041E49","border-radius": "20px"},
@@ -754,6 +753,7 @@ with st.sidebar:
     elif selected == "AI生圖":
         model_toggle = st.selectbox("",options=["DALL ·E 3", "DALL ·E 2"], key="dalle_model_display", label_visibility="collapsed")
         st.write("\n")
+    
 
     if selected =="對話":
         if st.session_state["model_type"] == "Perplexity":
@@ -783,7 +783,7 @@ async def stream_openai_response():
         response_container.markdown(f"""
             <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                 <img src="data:image/png;base64,{assistant_avatar_gpt}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                <div class="message-container" style="background: #F5F5F5; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                     {format_message(full_response)} \n </div>
             </div>
         """, unsafe_allow_html=True)
@@ -792,7 +792,7 @@ async def stream_openai_response():
     response_container.empty()
     message_func(full_response, is_user=False)
     chat_history_gpt[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
-    save_chat_history(chat_history_gpt, 'ChatGPT')                                                   
+    save_chat_history(chat_history_gpt, 'ChatGPT')                            
 
 def update_gpt_system_prompt():
     st.session_state['gpt_system_prompt'] = st.session_state['gpt_system_prompt_input']
@@ -815,7 +815,7 @@ def update_exported_shortcuts():
 def hide_expander():
     st.session_state['expander_state'] = False
     st.session_state['active_shortcut'] = None
-    
+
 if selected == "對話" and 'exported_shortcuts' in st.session_state:
     api_key_entered = (st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']) or \
               (st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key'])
@@ -846,7 +846,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
             st.session_state['reset_confirmed'] = False
             
         if f"messages_{st.session_state['model_type']}" not in st.session_state:
-            st.session_state[f"messages_{st.session_state['model_type']}"] = [{"role": "assistant", "content": "請輸入您的 OpenAI API Key" if st.session_state['model_type'] == "ChatGPT" and not st.session_state['chatbot_api_key'] else "請輸入您的 Perplexity API Key" if st.session_state['model_type'] == "Perplexity" and not st.session_state['perplexity_api_key'] else "請問需要什麼協助？"}]
+            st.session_state[f"messages_{st.session_state['model_type']}"] = []
         
         if not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
             for msg in st.session_state[f"messages_{st.session_state['model_type']}"]:
@@ -854,12 +854,46 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
 
         if st.session_state['model_type'] == "ChatGPT":
             if not st.session_state['open_ai_model'] == "DALL-E":
+                if st.session_state['chat_started']== False:
+                    text_placeholder = st.empty()
+                    with text_placeholder.container():
+                        html_code1 = """
+                            <style>
+                                .gradient-text {
+                                    font-size: 55px;
+                                    font-weight:bold;
+                                    background: linear-gradient(to right, #5282ED, #9874CE, #D96470);
+                                    -webkit-background-clip: text;
+                                    color: transparent;
+                                    display: inline;
+                                }
+                            </style>
+                            <div class="gradient-text">嗨，你好!</div>
+                            """
+                        st.markdown(html_code1, unsafe_allow_html=True)
+                        html_code2 = """
+                            <style>
+                                .text {
+                                    font-size: 50px;
+                                    font-weight:bold;
+                                    background: #C5C7C5;
+                                    -webkit-background-clip: text;
+                                    color: transparent;
+                                    display: inline;
+                                }
+                            </style>
+                            <div class="text">請問有什麼需要協助？</div>
+                            """
+                        st.markdown(html_code2, unsafe_allow_html=True)
+                        st.write("\n")
+                        
                 prompt = st.chat_input()
                 if prompt:
                     if not st.session_state['chatbot_api_key']:
                         message_func("請輸入您的 OpenAI API Key", is_user=False)
                     else:
                         st.session_state['chat_started'] = True
+                        text_placeholder.empty()
                         client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
                         st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
                         message_func(prompt, is_user=True)
@@ -876,12 +910,46 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                         asyncio.run(stream_openai_response())
 
         if st.session_state['model_type'] == "Perplexity":
+            if st.session_state['chat_started']== False:
+                text_placeholder = st.empty()
+                with text_placeholder.container():
+                    html_code1 = """
+                    <style>
+                    .gradient-text {
+                    font-size: 55px;
+                    font-weight:bold;
+                    background: linear-gradient(to right, #5282ED, #9874CE, #D96470);
+                    -webkit-background-clip: text;
+                    color: transparent;
+                    display: inline;
+                    }
+                    </style>
+                    <div class="gradient-text">嗨，你好!</div>
+                    """
+                st.markdown(html_code1, unsafe_allow_html=True)
+                html_code2 = """
+                    <style>
+                    .text {
+                    font-size: 50px;
+                    font-weight:bold;
+                    background: #C5C7C5;
+                    -webkit-background-clip: text;
+                    color: transparent;
+                    display: inline;
+                    }
+                    </style>
+                    <div class="text">請問有什麼需要協助？</div>
+                    """
+                st.markdown(html_code2, unsafe_allow_html=True)
+                st.write("\n")
+                
             prompt = st.chat_input()
             if prompt:
                 if not st.session_state['perplexity_api_key']:
                     message_func("請輸入您的 Perplexity API Key", is_user=False)
                 else:
                     st.session_state['chat_started'] = True
+                    text_placeholder.empty()
                     st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
                     message_func(prompt, is_user=True)
 
@@ -915,7 +983,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                             f"""
                             <div style="display: flex; align-items: center; margin-bottom: 25px; justify-content: flex-start;">
                                 <img src="data:image/png;base64,{assistant_avatar_perplexity}" class="bot-avatar" alt="avatar" style="width: 45px; height: 28px;" />
-                                <div class="message-container" style="background: #F0F4F8; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
+                                <div class="message-container" style="background: #F5F5F5; color: #2B2727; border-radius: 15px; padding: 10px 15px 10px 15px; margin-right: 5px; margin-left: 5px; font-size: 16px; max-width: 80%; word-wrap: break-word; word-break: break-all;">
                                     {full_response} \n </div>
                             </div>
                             """,
