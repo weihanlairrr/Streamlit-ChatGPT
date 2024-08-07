@@ -934,7 +934,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                                     display: inline;
                                 }
                             </style>
-                            <div class="text">請問需要什麼協助？</div>
+                            <div class="text">有什麼我可以幫上忙的嗎？</div>
                             """
                         st.markdown(html_code2, unsafe_allow_html=True)
                         st.write("\n")
@@ -992,7 +992,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                         display: inline;
                     }
                     </style>
-                    <div class="text">請問需要什麼協助？</div>
+                    <div class="text">有什麼我可以幫上忙的嗎？</div>
                     """
                     st.markdown(html_code2, unsafe_allow_html=True)
                     st.write("\n")
