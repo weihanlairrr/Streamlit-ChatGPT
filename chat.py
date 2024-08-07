@@ -854,8 +854,6 @@ def hide_expander():
     st.session_state['expander_state'] = False
     st.session_state['active_shortcut'] = None
 
-
-
 def greeting_based_on_time():
     tz = pytz.timezone('Asia/Taipei')
     now = datetime.now(tz)
