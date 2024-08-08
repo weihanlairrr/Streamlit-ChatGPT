@@ -1082,12 +1082,10 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
     
         if 提示詞模板 and not st.session_state['prompt_submitted']:
             if st.session_state['model_type'] == "ChatGPT":
-                st.session_state['gpt_chat_started'] = True
                 if st.session_state['text_placeholder']:
                     st.session_state['text_placeholder'].empty()
                     st.session_state['text_placeholder'] = None 
             elif st.session_state['model_type'] == "Perplexity":
-                st.session_state['perplexity_chat_started'] = True
                 if st.session_state['text_placeholder']:
                     st.session_state['text_placeholder'].empty()
                     st.session_state['text_placeholder'] = None 
@@ -1449,7 +1447,6 @@ if selected == "AI生圖":
         if not st.session_state['chatbot_api_key']:
             message_func("請輸入您的 OpenAI API Key", is_user=False)
         else:
-            st.session_state['dalle_chat_started'] = True
             if st.session_state['text_placeholder']:
                 st.session_state['text_placeholder'].empty()
                 st.session_state['text_placeholder'] = None  
