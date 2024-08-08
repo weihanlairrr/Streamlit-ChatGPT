@@ -1690,8 +1690,7 @@ if selected == "提示詞":
                                 st.selectbox(component['label'], component['options'], key=f'selector_{idx}_{i}')
                             elif component['type'] == "multi selector":
                                 st.multiselect(component['label'], component['options'], key=f'multi_selector_{idx}_{i}')
-                            col1,col2 = st.columns(2)
-                            if col1.button("刪除", key=f'delete_{idx}_{i}'):
+                            if st.button("刪除", key=f'delete_{idx}_{i}'):
                                 del shortcut['components'][i]
                                 update_exported_shortcuts()
                                 save_shortcuts()
@@ -1754,15 +1753,17 @@ if selected == "提示詞":
 
                 if len(st.session_state['shortcuts']) > 0:
                     tab_name = shortcut['name']
-                    if st.session_state.get('delete_confirmation') == idx:
-                        confirm_col, cancel_col = st.columns(2)
-                        with confirm_col:
-                            st.button("確認", key=f'confirm_delete_{idx}', on_click=confirm_delete_shortcut, args=(idx, True))
-                        with cancel_col:
-                            st.button("取消", key=f'cancel_delete_{idx}', on_click=confirm_delete_shortcut, args=(None, False))
-                    else:
-                        if st.button(f"刪除 {tab_name}", key=f'delete_tab_{idx}', on_click=lambda: confirm_delete_shortcut(idx)):
-                            st.session_state['delete_confirmation'] = idx
+                    col1,col2 = st.columns(2)
+                    with col1:
+                        if st.session_state.get('delete_confirmation') == idx:
+                            confirm_col, cancel_col = st.columns(2)
+                            with confirm_col:
+                                st.button("確認", key=f'confirm_delete_{idx}', on_click=confirm_delete_shortcut, args=(idx, True))
+                            with cancel_col:
+                                st.button("取消", key=f'cancel_delete_{idx}', on_click=confirm_delete_shortcut, args=(None, False))
+                        else:
+                            if st.button(f"刪除 {tab_name}", key=f'delete_tab_{idx}', on_click=lambda: confirm_delete_shortcut(idx)):
+                                st.session_state['delete_confirmation'] = idx
 
 #%% 頭像頁面
 def select_avatar(name, image):
