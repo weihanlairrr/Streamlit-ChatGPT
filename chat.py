@@ -1630,7 +1630,8 @@ if selected == "提示詞":
                 if component_type == "文字輸入":
                     with st.expander("建立文字變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'text_input_label_{idx}')
-                        if st.button("新增 文字輸入", key=f'add_text_input_{idx}'):
+                        col1,col2 = st.columns(2)
+                        if col1.button("新增 文字輸入", key=f'add_text_input_{idx}'):
                             if label:
                                 shortcut['components'].append({"type": "text input", "label": label})
                                 reset_new_component()
@@ -1648,7 +1649,8 @@ if selected == "提示詞":
                     with st.expander("建立選單變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'selector_label_{idx}')
                         options = st.text_area("輸入選項（每行一個）", key=f'selector_options_{idx}').split("\n")
-                        if st.button("新增 選單", key=f'add_selector_{idx}'):
+                        col1,col2 = st.columns(2)
+                        if col1.button("新增 選單", key=f'add_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "selector", "label": label, "options": options})
                                 reset_new_component()
@@ -1666,7 +1668,8 @@ if selected == "提示詞":
                     with st.expander("建立多選選單變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'multi_selector_label_{idx}')
                         options = st.text_area("輸入選項（每行一個）", key=f'multi_selector_options_{idx}').split("\n")
-                        if st.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
+                        col1,col2 = st.columns(2)
+                        if col1.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "multi selector", "label": label, "options": options})
                                 reset_new_component()
@@ -1687,7 +1690,8 @@ if selected == "提示詞":
                                 st.selectbox(component['label'], component['options'], key=f'selector_{idx}_{i}')
                             elif component['type'] == "multi selector":
                                 st.multiselect(component['label'], component['options'], key=f'multi_selector_{idx}_{i}')
-                            if st.button("刪除", key=f'delete_{idx}_{i}'):
+                            col1,col2 = st.columns(2)
+                            if col1.button("刪除", key=f'delete_{idx}_{i}'):
                                 del shortcut['components'][i]
                                 update_exported_shortcuts()
                                 save_shortcuts()
