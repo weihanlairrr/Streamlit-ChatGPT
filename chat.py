@@ -813,7 +813,7 @@ async def stream_openai_response():
     message_func(full_response, is_user=False)
     chat_history_gpt[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
     save_chat_history(chat_history_gpt, 'ChatGPT')      
-    st.session_state[f"messages_{st.session_state['model_type']}"] = []                  
+    st.rerun()                      
 
 def update_gpt_system_prompt():
     st.session_state['gpt_system_prompt'] = st.session_state['gpt_system_prompt_input']
