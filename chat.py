@@ -580,8 +580,8 @@ def format_message(text):
             table.index = table.index + 1
             styled_item = table.style.set_table_styles(
                 [{'selector': 'thead th', 'props': [('background-color', '#333'), ('color', 'white')]},
-                 {'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#f2f2f2')]},
-                 {'selector': 'tbody tr:hover', 'props': [('background-color', '#ddd')]}]
+                 {'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#fffff')]},
+                 {'selector': 'tbody tr:hover', 'props': [('background-color', '#DDE3EA')]}]
             ).set_properties(**{'text-align': 'left', 'font-family': 'Arial', 'font-size': '14px'})
             styled_html = styled_item.to_html()
             styled_html = styled_html.replace('border="1"', 'border="0"')
