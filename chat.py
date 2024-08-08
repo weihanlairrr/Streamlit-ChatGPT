@@ -793,8 +793,7 @@ with st.sidebar:
         st.session_state["dalle_model"] = dalle_model_map[st.session_state["dalle_model_display"]]
 
 #%% 對話頁面
-async def stream_openai_response():
-    response_container.empty() 
+async def stream_openai_response(): 
     async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
         if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
             st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
