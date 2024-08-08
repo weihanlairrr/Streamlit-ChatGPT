@@ -10,10 +10,10 @@ import re
 import os
 import html
 import streamlit_shadcn_ui as ui
-import pytz
 
 from io import BytesIO
 from streamlit_option_menu import option_menu
+import pytz
 from openai import AsyncOpenAI, OpenAI
 from datetime import datetime
 
@@ -778,7 +778,7 @@ with st.sidebar:
         ["對話",'AI生圖','模型設定','提示詞','頭像'],
         icons=['chat-dots-fill','palette-fill','gear-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
         styles={
-            "container": {"padding": "0!important", "background": "#F0F4F8"},
+            "container": {"padding": "0!important", "background": "transparent"},
             "icon": {"padding": "0px 10px 0px 0px !important","color": "#46474A", "font-size": "17px"},
             "nav-link": {"padding": "7px 0px 7px 15px","font-size": "17px", "text-align": "left", "margin":"3px", "--hover-color": "#E9EEF6","border-radius": "20px"},
             "nav-link-selected": {"padding": "7px 0px 7px 15px","background": "#B4D7FF", "color": "#041E49","border-radius": "20px"},
@@ -906,7 +906,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
     
         if st.session_state['model_type'] == "ChatGPT":
             if not st.session_state['open_ai_model'] == "DALL-E":
-                if st.session_state['gpt_chat_started'] == False:
+                if st.session_state['gpt_chat_started'] == False and not st.session_state['prompt_submitted']:
                     st.session_state['text_placeholder'] = st.empty()
                     with st.session_state['text_placeholder'].container():
                         html_code1 = f"""
@@ -964,7 +964,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                         asyncio.run(stream_openai_response())
     
         if st.session_state['model_type'] == "Perplexity":
-            if st.session_state['perplexity_chat_started'] == False:
+            if st.session_state['perplexity_chat_started'] == False and not st.session_state['prompt_submitted']:
                 st.session_state['text_placeholder'] = st.empty()
                 with st.session_state['text_placeholder'].container():
                     html_code1 = f"""
@@ -1005,7 +1005,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                     st.session_state['perplexity_chat_started'] = True
                     if st.session_state['text_placeholder']:
                         st.session_state['text_placeholder'].empty()
-                        st.session_state['text_placeholder'] = None  # 設置為 None
+                        st.session_state['text_placeholder'] = None 
                     st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
                     message_func(prompt, is_user=True)
         
@@ -1081,6 +1081,16 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 提示詞模板 = st.form_submit_button("送出")
     
         if 提示詞模板 and not st.session_state['prompt_submitted']:
+            if st.session_state['model_type'] == "ChatGPT":
+                st.session_state['gpt_chat_started'] = True
+                if st.session_state['text_placeholder']:
+                    st.session_state['text_placeholder'].empty()
+                    st.session_state['text_placeholder'] = None 
+            elif st.session_state['model_type'] == "Perplexity":
+                st.session_state['perplexity_chat_started'] = True
+                if st.session_state['text_placeholder']:
+                    st.session_state['text_placeholder'].empty()
+                    st.session_state['text_placeholder'] = None 
             st.session_state['active_shortcut'] = None
             st.session_state['expander_state'] = False
             form_placeholder.empty()
@@ -1389,7 +1399,7 @@ async def handle_image_generation(prompt):
 if selected == "AI生圖":
     if 'messages_DALLE' not in st.session_state:
         st.session_state['messages_DALLE'] = chat_history_dalle.get('DALL-E', [])
-    if st.session_state['dalle_chat_started'] == False:
+    if st.session_state['dalle_chat_started'] == False and not st.session_state['prompt_submitted']:
         st.session_state['text_placeholder'] = st.empty()
         with st.session_state['text_placeholder'].container():
             html_code1 = f"""
@@ -1482,6 +1492,10 @@ if selected == "AI生圖":
                 提示詞模板 = st.form_submit_button("送出")
     
         if 提示詞模板 and not st.session_state.get('prompt_submitted', False):
+            st.session_state['dalle_chat_started'] = True
+            if st.session_state['text_placeholder']:
+                st.session_state['text_placeholder'].empty()
+                st.session_state['text_placeholder'] = None 
             st.session_state['active_shortcut'] = None
             st.session_state['expander_state'] = False
             form_placeholder.empty()
