@@ -3,7 +3,6 @@ import streamlit as st
 import base64
 import pandas as pd
 import requests
-import asyncio
 import json
 import time
 import re
@@ -14,7 +13,7 @@ import streamlit_shadcn_ui as ui
 from io import BytesIO
 from streamlit_option_menu import option_menu
 import pytz
-from openai import AsyncOpenAI, OpenAI
+from openai import OpenAI, OpenAI
 from datetime import datetime
 
 #%% 保存和載入設置      
@@ -338,7 +337,7 @@ with st.sidebar:
     )
             
 #%% 產生對話
-async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
+def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
     try:
         if system_prompt:
             messages.insert(0, {"role": "system", "content": system_prompt})
@@ -347,7 +346,7 @@ async def get_openai_response(client, model, messages, temperature, top_p, prese
             prompt = messages[-1]['content'] + f" 請使用{st.session_state['language']}回答。"
             messages[-1]['content'] = prompt
 
-        response = await client.chat.completions.create(
+        response = client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=temperature,
@@ -358,7 +357,7 @@ async def get_openai_response(client, model, messages, temperature, top_p, prese
             stream=True
         )
         streamed_text = ""
-        async for chunk in response:
+        for chunk in response:
             chunk_content = chunk.choices[0].delta.content
             if chunk_content is not None:
                 streamed_text += chunk_content
@@ -434,9 +433,9 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
     except Exception as e:
         yield f"Unexpected Error: {str(e)}"
 
-async def handle_prompt_submission(prompt):
+def handle_prompt_submission(prompt):
     if st.session_state['model_type'] == "ChatGPT":
-        client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
+        client = OpenAI(api_key=st.session_state['chatbot_api_key'])
         message_func(prompt, is_user=True)
 
         thinking_placeholder = st.empty()
@@ -450,7 +449,7 @@ async def handle_prompt_submission(prompt):
         
         messages = st.session_state["messages_ChatGPT"] + [{"role": "user", "content": prompt}]
         
-        async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
+        for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
             if status_text in [msg['content'] for msg in st.session_state["messages_ChatGPT"] if msg['role'] == 'assistant']:
                 st.session_state["messages_ChatGPT"] = [msg for msg in st.session_state["messages_ChatGPT"] if msg['content'] != status_text]
                 thinking_placeholder.empty()
@@ -793,8 +792,8 @@ with st.sidebar:
         st.session_state["dalle_model"] = dalle_model_map[st.session_state["dalle_model_display"]]
 
 #%% 對話頁面
-async def stream_openai_response():
-    async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
+def stream_openai_response():
+    for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
         if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
             st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
             thinking_placeholder.empty()
@@ -929,7 +928,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                         if st.session_state['text_placeholder']:
                             st.session_state['text_placeholder'].empty()
                             st.session_state['text_placeholder'] = None 
-                        client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
+                        client = OpenAI(api_key=st.session_state['chatbot_api_key'])
                         st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
                         message_func(prompt, is_user=True)
         
@@ -942,7 +941,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                         response_container = st.empty()
                         messages = st.session_state[f"messages_{st.session_state['model_type']}"] + [{"role": "user", "content": prompt}]
                         full_response = ""
-                        asyncio.run(stream_openai_response())
+                        stream_openai_response()
     
         if st.session_state['model_type'] == "Perplexity":
             if st.session_state['perplexity_chat_started'] == False:
@@ -1082,7 +1081,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 prompt = prompt_template.replace("{{", "{").replace("}}", "}")
                 st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
     
-                asyncio.run(handle_prompt_submission(prompt))
+                handle_prompt_submission(prompt)
                 st.session_state['prompt_submitted'] = True
                 st.rerun()
             except KeyError as e:
@@ -1344,7 +1343,7 @@ def update(action):
     elif action == 'cancel':
         st.session_state['reset_confirmation'] = False
 
-async def generate_image_from_prompt(prompt, model):
+def generate_image_from_prompt(prompt, model):
     client = OpenAI(api_key=st.session_state['chatbot_api_key'])
 
     try:
@@ -1366,8 +1365,8 @@ async def generate_image_from_prompt(prompt, model):
         st.error(f"圖片生成失敗：{str(e)}")
         return None
     
-async def handle_image_generation(prompt):
-    img_base64 = await generate_image_from_prompt(prompt, st.session_state['dalle_model'])
+def handle_image_generation(prompt):
+    img_base64 = generate_image_from_prompt(prompt, st.session_state['dalle_model'])
     if img_base64:
         thinking_placeholder.empty()
         st.session_state["messages_DALLE"] = [msg for msg in st.session_state["messages_DALLE"] if msg["content"] != status_text]
@@ -1444,7 +1443,7 @@ if selected == "AI生圖":
     
             response_container = st.empty()
     
-            asyncio.run(handle_image_generation(prompt))
+            handle_image_generation(prompt)
             st.session_state['prompt_submitted'] = True
 
     if 'active_shortcut' in st.session_state and st.session_state.get('active_shortcut') is not None and st.session_state['active_shortcut']['target'] == 'image':
@@ -1494,7 +1493,7 @@ if selected == "AI生圖":
     
                 response_container = st.empty()
     
-                asyncio.run(handle_image_generation(prompt))
+                handle_image_generation(prompt)
                 st.session_state['prompt_submitted'] = True
                 st.rerun()
             except KeyError as e:
