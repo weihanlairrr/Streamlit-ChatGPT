@@ -794,6 +794,7 @@ with st.sidebar:
 
 #%% 對話頁面
 async def stream_openai_response():
+    response_container.empty() 
     async for response_message in get_openai_response(client, st.session_state['open_ai_model'], messages, st.session_state['temperature'], st.session_state['top_p'], st.session_state['presence_penalty'], st.session_state['frequency_penalty'], st.session_state['max_tokens'], st.session_state['gpt_system_prompt'], st.session_state['language']):
         if status_text in [msg['content'] for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['role'] == 'assistant']:
             st.session_state[f"messages_{st.session_state['model_type']}"] = [msg for msg in st.session_state[f"messages_{st.session_state['model_type']}"] if msg['content'] != status_text]
@@ -809,11 +810,10 @@ async def stream_openai_response():
         """, unsafe_allow_html=True)
     
     st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "assistant", "content": full_response})
-    response_container.empty()
     message_func(full_response, is_user=False)
     chat_history_gpt[st.session_state['model_type']] = st.session_state[f"messages_{st.session_state['model_type']}"]
-    save_chat_history(chat_history_gpt, 'ChatGPT')      
-    st.rerun()                      
+    save_chat_history(chat_history_gpt, 'ChatGPT')
+    st.rerun()                  
 
 def update_gpt_system_prompt():
     st.session_state['gpt_system_prompt'] = st.session_state['gpt_system_prompt_input']
@@ -941,7 +941,6 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
         
                         response_container = st.empty()
                         messages = st.session_state[f"messages_{st.session_state['model_type']}"] + [{"role": "user", "content": prompt}]
-                        full_response = ""
                         asyncio.run(stream_openai_response())
     
         if st.session_state['model_type'] == "Perplexity":
