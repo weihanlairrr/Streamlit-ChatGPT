@@ -1724,33 +1724,33 @@ if selected == "提示詞":
                     except KeyError as e:
                         st.error(f"缺少必需的輸入: {e}")
                 st.write("\n")
-                    colA,colB = st.columns(2)
-                    with colB:
-                        if shortcut['components'] and st.session_state[f'prompt_template_{idx}'].strip():
-                            if len(st.session_state.get('exported_shortcuts', [])) < 4 and shortcut['name'] not in [s['name'] for s in st.session_state.get('exported_shortcuts', [])]:
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    if st.button("輸出到對話頁面", key=f'export_to_chat_{idx}'):
-                                        if 'exported_shortcuts' not in st.session_state:
-                                            st.session_state['exported_shortcuts'] = []
-                                        shortcut['target'] = 'chat'
-                                        st.session_state['exported_shortcuts'].append(shortcut)
-                                        save_shortcuts()
-                                        st.success("成功輸出，請至對話頁查看")
-                                        time.sleep(1)
-                                        st.session_state['exported_shortcuts'].append(shortcut['name'])
-                                        st.rerun()
-                                with col2:
-                                    if st.button("輸出到AI生圖頁", key=f'export_to_image_{idx}'):
-                                        if 'exported_shortcuts' not in st.session_state:
-                                            st.session_state['exported_shortcuts'] = []
-                                        shortcut['target'] = 'image'
-                                        st.session_state['exported_shortcuts'].append(shortcut)
-                                        save_shortcuts()
-                                        st.success("成功輸出，請至AI生圖頁查看")
-                                        time.sleep(1)
-                                        st.session_state['exported_shortcuts'].append(shortcut['name'])
-                                        st.rerun()
+                colA,colB = st.columns(2)
+                with colB:
+                    if shortcut['components'] and st.session_state[f'prompt_template_{idx}'].strip():
+                        if len(st.session_state.get('exported_shortcuts', [])) < 4 and shortcut['name'] not in [s['name'] for s in st.session_state.get('exported_shortcuts', [])]:
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("輸出到對話頁面", key=f'export_to_chat_{idx}'):
+                                    if 'exported_shortcuts' not in st.session_state:
+                                        st.session_state['exported_shortcuts'] = []
+                                    shortcut['target'] = 'chat'
+                                    st.session_state['exported_shortcuts'].append(shortcut)
+                                    save_shortcuts()
+                                    st.success("成功輸出，請至對話頁查看")
+                                    time.sleep(1)
+                                    st.session_state['exported_shortcuts'].append(shortcut['name'])
+                                    st.rerun()
+                            with col2:
+                                if st.button("輸出到AI生圖頁", key=f'export_to_image_{idx}'):
+                                    if 'exported_shortcuts' not in st.session_state:
+                                        st.session_state['exported_shortcuts'] = []
+                                    shortcut['target'] = 'image'
+                                    st.session_state['exported_shortcuts'].append(shortcut)
+                                    save_shortcuts()
+                                    st.success("成功輸出，請至AI生圖頁查看")
+                                    time.sleep(1)
+                                    st.session_state['exported_shortcuts'].append(shortcut['name'])
+                                    st.rerun()
 
                 if len(st.session_state['shortcuts']) > 0:
                     tab_name = shortcut['name']
