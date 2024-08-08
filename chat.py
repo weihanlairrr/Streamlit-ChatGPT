@@ -120,9 +120,6 @@ avatars = {
 
 #%% 初始化狀態變量
 def init_session_state():
-    if 'prompt_submitted' not in st.session_state:
-        st.session_state['prompt_submitted'] = False
-
     settings_defaults = {
         'chatbot_api_key': settings.get('chatbot_api_key', ''),
         'perplexity_api_key': settings.get('perplexity_api_key', ''),
@@ -151,23 +148,7 @@ def init_session_state():
         'prompt_submitted': False,
         'reset_triggered': False,
         'text_placeholder': None,
-        'dalle_model': settings.get('dalle_model', 'dall-e-3')
-    }
-
-    for key, default_value in settings_defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = default_value
-
-    if st.session_state.get('reset_triggered', False):
-        st.session_state[f'messages_{st.session_state["model_type"]}'] = []
-        st.session_state['reset_triggered'] = False
-    else:
-        if 'messages_ChatGPT' not in st.session_state:
-            st.session_state['messages_ChatGPT'] = chat_history_gpt.get('ChatGPT', [])
-        if 'messages_Perplexity' not in st.session_state:
-            st.session_state['messages_Perplexity'] = chat_history_perplexity.get('Perplexity', [])
-
-    additional_defaults = {
+        'dalle_model': settings.get('dalle_model', 'dall-e-3'),
         'reset_confirmed': False,
         'shortcuts': load_shortcuts(),
         'current_shortcut': 0,
@@ -178,9 +159,19 @@ def init_session_state():
         'expander_state': True
     }
 
-    for key, default_value in additional_defaults.items():
+    for key, default_value in settings_defaults.items():
         if key not in st.session_state:
             st.session_state[key] = default_value
+    if 'prompt_submitted' not in st.session_state:
+        st.session_state['prompt_submitted'] = False
+    if st.session_state.get('reset_triggered', False):
+        st.session_state[f'messages_{st.session_state["model_type"]}'] = []
+        st.session_state['reset_triggered'] = False
+    else:
+        if 'messages_ChatGPT' not in st.session_state:
+            st.session_state['messages_ChatGPT'] = chat_history_gpt.get('ChatGPT', [])
+        if 'messages_Perplexity' not in st.session_state:
+            st.session_state['messages_Perplexity'] = chat_history_perplexity.get('Perplexity', [])
 
     placeholder_status = load_placeholder_status()
     st.session_state['gpt_chat_started'] = placeholder_status.get('ChatGPT', False)
