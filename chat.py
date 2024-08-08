@@ -162,8 +162,6 @@ def init_session_state():
     for key, default_value in settings_defaults.items():
         if key not in st.session_state:
             st.session_state[key] = default_value
-    if 'prompt_submitted' not in st.session_state:
-        st.session_state['prompt_submitted'] = False
     if st.session_state.get('reset_triggered', False):
         st.session_state[f'messages_{st.session_state["model_type"]}'] = []
         st.session_state['reset_triggered'] = False
@@ -741,7 +739,6 @@ def reset_chat(confirm_reset=None):
         else:
             st.session_state['reset_confirmation'] = False
 
-
 def cancel_reset_chat():
     st.session_state['reset_confirmation'] = False
 
@@ -838,8 +835,6 @@ def update_exported_shortcuts():
 def hide_expander():
     st.session_state['expander_state'] = False
     st.session_state['active_shortcut'] = None
-
-
 
 def greeting_based_on_time():
     tz = pytz.timezone('Asia/Taipei')
@@ -1087,8 +1082,8 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 st.session_state[f"messages_{st.session_state['model_type']}"].append({"role": "user", "content": prompt})
     
                 asyncio.run(handle_prompt_submission(prompt))
-    
                 st.session_state['prompt_submitted'] = True
+                st.rerun()
             except KeyError as e:
                 st.error(f"缺少必需的輸入: {e}")
 
@@ -1490,7 +1485,6 @@ if selected == "AI生圖":
                 prompt = prompt_template.replace("{{", "{").replace("}}", "}")
                 st.session_state["messages_DALLE"].append({"role": "user", "content": prompt})
                 message_func(prompt, is_user=True)
-
                 thinking_placeholder = st.empty()
                 status_text = "圖片生成中..."
                 st.session_state["messages_DALLE"].append({"role": "assistant", "content": status_text})
@@ -1500,7 +1494,8 @@ if selected == "AI生圖":
                 response_container = st.empty()
     
                 asyncio.run(handle_image_generation(prompt))
-                st.session_state['prompt_submitted'] = True 
+                st.session_state['prompt_submitted'] = True
+                st.rerun()
             except KeyError as e:
                 st.error(f"缺少必需的輸入: {e}")
     
@@ -1511,7 +1506,6 @@ if selected == "AI生圖":
         st.divider()
         if 'reset_confirmation' not in st.session_state:
             st.session_state['reset_confirmation'] = False
-
         if st.session_state['reset_confirmation']:
             confirm_col, cancel_col = st.columns(2)
             with confirm_col:
@@ -1520,7 +1514,6 @@ if selected == "AI生圖":
                 st.button("取消", key="cancel_reset_dalle", on_click=lambda: update('cancel'))
         else:
             st.button("重置對話", key="reset_chat_dalle", on_click=lambda: update('reset'))
-
             
 #%% 提示詞頁面
 def reset_new_component():
