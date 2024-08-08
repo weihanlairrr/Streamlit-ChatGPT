@@ -156,12 +156,7 @@ def init_session_state():
         'shortcut_names': [shortcut["name"] for shortcut in load_shortcuts()],
         'exported_shortcuts': [],
         'avatar_selected': False,
-        'expander_state': True,
-        'messages_ChatGPT': chat_history_gpt.get('ChatGPT', []),
-        'messages_Perplexity': chat_history_perplexity.get('Perplexity', []),
-        'gpt_chat_started': load_placeholder_status().get('ChatGPT', False),
-        'perplexity_chat_started': load_placeholder_status().get('Perplexity', False),
-        'dalle_chat_started': load_placeholder_status().get('DALL-E', False)
+        'expander_state': True
     }
 
     for key, default_value in initial_values.items():
@@ -174,6 +169,16 @@ def init_session_state():
         else:
             st.session_state['messages_Perplexity'] = []
         st.session_state['reset_triggered'] = False
+    else:
+        if "messages_ChatGPT" not in st.session_state:
+            st.session_state["messages_ChatGPT"] = chat_history_gpt.get('ChatGPT', [])
+        if "messages_Perplexity" not in st.session_state:
+            st.session_state["messages_Perplexity"] = chat_history_perplexity.get('Perplexity', [])
+
+    placeholder_status = load_placeholder_status()
+    st.session_state['gpt_chat_started'] = placeholder_status.get('ChatGPT', False)
+    st.session_state['perplexity_chat_started'] = placeholder_status.get('Perplexity', False)
+    st.session_state['dalle_chat_started'] = placeholder_status.get('DALL-E', False)
 
 init_session_state()
 
