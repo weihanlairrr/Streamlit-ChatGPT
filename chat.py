@@ -150,6 +150,7 @@ def init_session_state():
         'dalle_model': settings.get('dalle_model', 'dall-e-3'),
         'reset_confirmed': False,
         'shortcuts': load_shortcuts(),
+        'shortcut':[],
         'current_shortcut': 0,
         'new_component': {"label": "", "options": ""},
         'shortcut_names': [shortcut["name"] for shortcut in st.session_state['shortcuts']],
@@ -169,10 +170,6 @@ def init_session_state():
             st.session_state['messages_ChatGPT'] = chat_history_gpt.get('ChatGPT', [])
         if 'messages_Perplexity' not in st.session_state:
             st.session_state['messages_Perplexity'] = chat_history_perplexity.get('Perplexity', [])
-    if 'shortcuts' not in st.session_state:
-        st.session_state['shortcuts'] = []
-    if 'current_shortcut' not in st.session_state:
-        st.session_state['current_shortcut'] = 0
 
     placeholder_status = load_placeholder_status()
     st.session_state['gpt_chat_started'] = placeholder_status.get('ChatGPT', False)
@@ -902,7 +899,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
             for msg in st.session_state[f"messages_{st.session_state['model_type']}"]:
                 message_func(msg["content"], is_user=(msg["role"] == "user"))
     
-        if st.session_state['model_type'] == "ChatGPT":
+        if st.session_state['model_type'] == "ChatGPT" and not st.session_state['prompt_submitted']:
             if not st.session_state['open_ai_model'] == "DALL-E":
                 if st.session_state['gpt_chat_started'] == False:
                     st.session_state['text_placeholder'] = st.empty()
@@ -923,7 +920,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
 
                         handle_prompt_submission(prompt)
     
-        if st.session_state['model_type'] == "Perplexity":
+        if st.session_state['model_type'] == "Perplexity" and not st.session_state['prompt_submitted']:
             if st.session_state['perplexity_chat_started'] == False:
                 st.session_state['text_placeholder'] = st.empty()
                 with st.session_state['text_placeholder'].container():
@@ -1284,7 +1281,7 @@ def handle_image_generation(prompt):
 if selected == "AI生圖":
     if 'messages_DALLE' not in st.session_state:
         st.session_state['messages_DALLE'] = chat_history_dalle.get('DALL-E', [])
-    if st.session_state['dalle_chat_started'] == False:
+    if st.session_state['dalle_chat_started'] == False and not st.session_state['prompt_submitted']:
         st.session_state['text_placeholder'] = st.empty()
         with st.session_state['text_placeholder'].container():
             html_code1 = f"""
