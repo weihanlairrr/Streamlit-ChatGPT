@@ -149,13 +149,14 @@ def init_session_state():
         'text_placeholder': None,
         'dalle_model': settings.get('dalle_model', 'dall-e-3'),
         'reset_confirmed': False,
-        'shortcuts': load_shortcuts(),
+        'shortcut':[],
         'current_shortcut': 0,
+        'shortcuts': load_shortcuts(),
         'new_component': {"label": "", "options": ""},
         'shortcut_names': [shortcut["name"] for shortcut in st.session_state['shortcuts']],
         'exported_shortcuts': [],
         'avatar_selected': False,
-        'expander_state': True
+        'expander_state': True,
     }
 
     for key, default_value in settings_defaults.items():
@@ -483,7 +484,7 @@ def handle_prompt_submission(prompt):
         chat_history_gpt[st.session_state['model_type']] = st.session_state["messages_ChatGPT"]
         save_chat_history(chat_history_gpt, 'ChatGPT')
         st.session_state['prev_response'] = full_response 
-        st.rerun()
+        st.rerun()    
         
     elif st.session_state['model_type'] == "Perplexity":
         message_func(prompt, is_user=True)
@@ -532,7 +533,6 @@ def handle_prompt_submission(prompt):
         chat_history_perplexity[st.session_state['model_type']] = st.session_state["messages_Perplexity"]
         save_chat_history(chat_history_perplexity, 'Perplexity')
         st.session_state['prev_response'] = full_response  
-
         if prev_state != st.session_state["messages_Perplexity"]:
             st.session_state['prev_state'] = {'messages_Perplexity': st.session_state["messages_Perplexity"].copy()}
 
@@ -1502,7 +1502,6 @@ def update_shortcut_name(idx):
 
 if selected == "提示詞":
     with st.sidebar:
-        st.divider()
         if st.button("新增提示詞"):
             add_shortcut()
 
@@ -1527,8 +1526,7 @@ if selected == "提示詞":
                 if component_type == "文字輸入":
                     with st.expander("建立文字變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'text_input_label_{idx}')
-                        col1,col2 = st.columns(2)
-                        if col1.button("新增 文字輸入", key=f'add_text_input_{idx}'):
+                        if st.button("新增 文字輸入", key=f'add_text_input_{idx}'):
                             if label:
                                 shortcut['components'].append({"type": "text input", "label": label})
                                 reset_new_component()
@@ -1546,8 +1544,7 @@ if selected == "提示詞":
                     with st.expander("建立選單變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'selector_label_{idx}')
                         options = st.text_area("輸入選項（每行一個）", key=f'selector_options_{idx}').split("\n")
-                        col1,col2 = st.columns(2)
-                        if col1.button("新增 選單", key=f'add_selector_{idx}'):
+                        if st.button("新增 選單", key=f'add_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "selector", "label": label, "options": options})
                                 reset_new_component()
@@ -1565,8 +1562,7 @@ if selected == "提示詞":
                     with st.expander("建立多選選單變數", expanded=True):
                         label = st.text_input("變數名稱", key=f'multi_selector_label_{idx}')
                         options = st.text_area("輸入選項（每行一個）", key=f'multi_selector_options_{idx}').split("\n")
-                        col1,col2 = st.columns(2)
-                        if col1.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
+                        if st.button("新增 多選選單", key=f'add_multi_selector_{idx}'):
                             if label and options and all(option.strip() for option in options):
                                 shortcut['components'].append({"type": "multi selector", "label": label, "options": options})
                                 reset_new_component()
@@ -1621,46 +1617,45 @@ if selected == "提示詞":
                     except KeyError as e:
                         st.error(f"缺少必需的輸入: {e}")
                 st.write("\n")
-                colA,colB = st.columns(2)
-                with colB:
-                    if shortcut['components'] and st.session_state[f'prompt_template_{idx}'].strip():
-                        if len(st.session_state.get('exported_shortcuts', [])) < 4 and shortcut['name'] not in [s['name'] for s in st.session_state.get('exported_shortcuts', [])]:
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                if st.button("輸出到對話頁面", key=f'export_to_chat_{idx}'):
-                                    if 'exported_shortcuts' not in st.session_state:
-                                        st.session_state['exported_shortcuts'] = []
-                                    shortcut['target'] = 'chat'
-                                    st.session_state['exported_shortcuts'].append(shortcut)
-                                    save_shortcuts()
-                                    st.success("成功輸出，請至對話頁查看")
-                                    time.sleep(1)
-                                    st.session_state['exported_shortcuts'].append(shortcut['name'])
-                                    st.rerun()
-                            with col2:
-                                if st.button("輸出到AI生圖頁", key=f'export_to_image_{idx}'):
-                                    if 'exported_shortcuts' not in st.session_state:
-                                        st.session_state['exported_shortcuts'] = []
-                                    shortcut['target'] = 'image'
-                                    st.session_state['exported_shortcuts'].append(shortcut)
-                                    save_shortcuts()
-                                    st.success("成功輸出，請至AI生圖頁查看")
-                                    time.sleep(1)
-                                    st.session_state['exported_shortcuts'].append(shortcut['name'])
-                                    st.rerun()
+                
+                if shortcut['components'] and st.session_state[f'prompt_template_{idx}'].strip():
+                    if len(st.session_state.get('exported_shortcuts', [])) < 4 and shortcut['name'] not in [s['name'] for s in st.session_state.get('exported_shortcuts', [])]:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("輸出到對話頁面", key=f'export_to_chat_{idx}'):
+                                if 'exported_shortcuts' not in st.session_state:
+                                    st.session_state['exported_shortcuts'] = []
+                                shortcut['target'] = 'chat'
+                                st.session_state['exported_shortcuts'].append(shortcut)
+                                save_shortcuts()
+                                st.success("成功輸出，請至對話頁查看")
+                                time.sleep(1)
+                                st.session_state['exported_shortcuts'].append(shortcut['name'])
+                                st.rerun()
+                        with col2:
+                            if st.button("輸出到AI生圖頁", key=f'export_to_image_{idx}'):
+                                if 'exported_shortcuts' not in st.session_state:
+                                    st.session_state['exported_shortcuts'] = []
+                                shortcut['target'] = 'image'
+                                st.session_state['exported_shortcuts'].append(shortcut)
+                                save_shortcuts()
+                                st.success("成功輸出，請至AI生圖頁查看")
+                                time.sleep(1)
+                                st.session_state['exported_shortcuts'].append(shortcut['name'])
+                                st.rerun()
 
                 if len(st.session_state['shortcuts']) > 0:
                     tab_name = shortcut['name']
-                    with colA:
-                        if st.session_state.get('delete_confirmation') == idx:
-                            confirm_col, cancel_col = st.columns(2)
-                            with confirm_col:
-                                st.button("確認", key=f'confirm_delete_{idx}', on_click=confirm_delete_shortcut, args=(idx, True))
-                            with cancel_col:
-                                st.button("取消", key=f'cancel_delete_{idx}', on_click=confirm_delete_shortcut, args=(None, False))
-                        else:
-                            if st.button(f"刪除 {tab_name}", key=f'delete_tab_{idx}', on_click=lambda: confirm_delete_shortcut(idx)):
-                                st.session_state['delete_confirmation'] = idx
+                    if st.session_state.get('delete_confirmation') == idx:
+                        confirm_col, cancel_col = st.columns(2)
+                        with confirm_col:
+                            st.button("確認", key=f'confirm_delete_{idx}', on_click=confirm_delete_shortcut, args=(idx, True))
+                        with cancel_col:
+                            st.button("取消", key=f'cancel_delete_{idx}', on_click=confirm_delete_shortcut, args=(None, False))
+                    else:
+                        if st.button(f"刪除 {tab_name}", key=f'delete_tab_{idx}', on_click=lambda: confirm_delete_shortcut(idx)):
+                            st.session_state['delete_confirmation'] = idx
+
 
 #%% 頭像頁面
 def select_avatar(name, image):
