@@ -332,6 +332,9 @@ with st.sidebar:
         .message-container p + ol + p {
             margin-top: 1em !important;
         }
+        [data-testid=stSidebar] {
+            background: #F0F4F8;
+        }
         </style>
         """,
         unsafe_allow_html=True
