@@ -875,7 +875,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 if shortcut['target'] == 'chat':  
                     col = st.columns(1)[0]
                     with col:
-                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#C4DDA7", "color": "#2b2727"}):
+                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#B4D7FF", "color": "#2b2727"}):
                             st.session_state['active_shortcut'] = shortcut
 
     if 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
@@ -1631,7 +1631,7 @@ if selected == "提示詞":
                                     shortcut['target'] = 'chat'
                                     st.session_state['exported_shortcuts'].append(shortcut)
                                     save_shortcuts()
-                                    st.success("成功輸出，請至對話頁查看")
+                                    st.success("輸出成功")
                                     time.sleep(1)
                                     st.session_state['exported_shortcuts'].append(shortcut['name'])
                                     st.rerun()
@@ -1642,7 +1642,7 @@ if selected == "提示詞":
                                     shortcut['target'] = 'image'
                                     st.session_state['exported_shortcuts'].append(shortcut)
                                     save_shortcuts()
-                                    st.success("成功輸出，請至AI生圖頁查看")
+                                    st.success("輸出成功")
                                     time.sleep(1)
                                     st.session_state['exported_shortcuts'].append(shortcut['name'])
                                     st.rerun()
