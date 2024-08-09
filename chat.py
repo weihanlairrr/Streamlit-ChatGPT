@@ -149,9 +149,8 @@ def init_session_state():
         'text_placeholder': None,
         'dalle_model': settings.get('dalle_model', 'dall-e-3'),
         'reset_confirmed': False,
-        'shortcut':[],
-        'current_shortcut': 0,
         'shortcuts': load_shortcuts(),
+        'current_shortcut': 0,
         'new_component': {"label": "", "options": ""},
         'shortcut_names': [shortcut["name"] for shortcut in st.session_state['shortcuts']],
         'exported_shortcuts': [],
@@ -170,6 +169,10 @@ def init_session_state():
             st.session_state['messages_ChatGPT'] = chat_history_gpt.get('ChatGPT', [])
         if 'messages_Perplexity' not in st.session_state:
             st.session_state['messages_Perplexity'] = chat_history_perplexity.get('Perplexity', [])
+    if 'shortcuts' not in st.session_state:
+        st.session_state['shortcuts'] = []
+    if 'current_shortcut' not in st.session_state:
+        st.session_state['current_shortcut'] = 0
 
     placeholder_status = load_placeholder_status()
     st.session_state['gpt_chat_started'] = placeholder_status.get('ChatGPT', False)
