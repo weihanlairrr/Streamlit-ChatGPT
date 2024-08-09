@@ -1,8 +1,10 @@
+
 #%% 導入套件
 import streamlit as st
 import base64
 import pandas as pd
 import requests
+import asyncio
 import json
 import time
 import re
@@ -13,7 +15,7 @@ import streamlit_shadcn_ui as ui
 from io import BytesIO
 from streamlit_option_menu import option_menu
 import pytz
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from datetime import datetime
 
 #%% 保存和載入設置      
@@ -150,13 +152,12 @@ def init_session_state():
         'dalle_model': settings.get('dalle_model', 'dall-e-3'),
         'reset_confirmed': False,
         'shortcuts': load_shortcuts(),
-        'shortcut':[],
         'current_shortcut': 0,
         'new_component': {"label": "", "options": ""},
         'shortcut_names': [shortcut["name"] for shortcut in st.session_state['shortcuts']],
         'exported_shortcuts': [],
         'avatar_selected': False,
-        'expander_state': True,
+        'expander_state': True
     }
 
     for key, default_value in settings_defaults.items():
@@ -332,16 +333,13 @@ with st.sidebar:
         .message-container p + ol + p {
             margin-top: 1em !important;
         }
-        [data-testid=stSidebar] {
-            background: #F0F4F8;
-        }
         </style>
         """,
         unsafe_allow_html=True
     )
             
 #%% 產生對話
-def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
+async def get_openai_response(client, model, messages, temperature, top_p, presence_penalty, frequency_penalty, max_tokens, system_prompt, language):
     try:
         if system_prompt:
             messages.insert(0, {"role": "system", "content": system_prompt})
@@ -350,7 +348,7 @@ def get_openai_response(client, model, messages, temperature, top_p, presence_pe
             prompt = messages[-1]['content'] + f" 請使用{st.session_state['language']}回答。"
             messages[-1]['content'] = prompt
 
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=temperature,
@@ -361,7 +359,7 @@ def get_openai_response(client, model, messages, temperature, top_p, presence_pe
             stream=True
         )
         streamed_text = ""
-        for chunk in response:
+        async for chunk in response:
             chunk_content = chunk.choices[0].delta.content
             if chunk_content is not None:
                 streamed_text += chunk_content
@@ -437,9 +435,9 @@ def generate_perplexity_response(prompt, history, model, temperature, top_p, pre
     except Exception as e:
         yield f"Unexpected Error: {str(e)}"
 
-def handle_prompt_submission(prompt):
+async def handle_prompt_submission(prompt):
     if st.session_state['model_type'] == "ChatGPT":
-        client = OpenAI(api_key=st.session_state['chatbot_api_key'])
+        client = AsyncOpenAI(api_key=st.session_state['chatbot_api_key'])
         message_func(prompt, is_user=True)
         thinking_placeholder = st.empty()
         status_text = "Thinking..."
@@ -451,7 +449,7 @@ def handle_prompt_submission(prompt):
         response_container = st.empty()
         full_response = ""
         
-        for response_message in get_openai_response(
+        async for response_message in get_openai_response(
             client,
             st.session_state['open_ai_model'], 
             messages, 
@@ -484,8 +482,7 @@ def handle_prompt_submission(prompt):
         chat_history_gpt[st.session_state['model_type']] = st.session_state["messages_ChatGPT"]
         save_chat_history(chat_history_gpt, 'ChatGPT')
         st.session_state['prev_response'] = full_response 
-        st.rerun()    
-        
+
     elif st.session_state['model_type'] == "Perplexity":
         message_func(prompt, is_user=True)
         prev_state = st.session_state.get('prev_state', {}).get('messages_Perplexity', []).copy()
@@ -770,7 +767,7 @@ with st.sidebar:
         ["對話",'AI生圖','模型設定','提示詞','頭像'],
         icons=['chat-dots-fill','palette-fill','gear-fill','info-square-fill','person-square'], menu_icon="robot", default_index=0,
         styles={
-            "container": {"padding": "0!important", "background": "#F0F4F8"},
+            "container": {"padding": "0!important", "background": "transparent"},
             "icon": {"padding": "0px 10px 0px 0px !important","color": "#46474A", "font-size": "17px"},
             "nav-link": {"padding": "7px 0px 7px 15px","font-size": "17px", "text-align": "left", "margin":"3px", "--hover-color": "#E9EEF6","border-radius": "20px"},
             "nav-link-selected": {"padding": "7px 0px 7px 15px","background": "#B4D7FF", "color": "#041E49","border-radius": "20px"},
@@ -784,7 +781,6 @@ with st.sidebar:
         model_toggle = st.selectbox("",options=["DALL ·E 3", "DALL ·E 2"], key="dalle_model_display", label_visibility="collapsed")
         st.write("\n")
     
-
     if selected =="對話":
         if st.session_state["model_type"] == "Perplexity":
             assistant_avatar = assistant_avatar_perplexity
@@ -837,6 +833,38 @@ def greeting_based_on_time():
         return "晚安，你好！"
 greeting_message = greeting_based_on_time()
 
+def render_initial_placeholder():
+    """渲染初始對話頁面的歡迎文字"""
+    html_code1 = f"""
+        <style>
+            .gradient-text {{
+                font-size: 55px;
+                font-weight:bold;
+                background: linear-gradient(to right, #5282ED, #9874CE, #D96470);
+                -webkit-background-clip: text;
+                color: transparent;
+                display: inline;
+            }}
+        </style>
+        <div class="gradient-text">{greeting_message}</div>
+        """
+    html_code2 = """
+        <style>
+        .text {
+            font-size: 50px;
+            font-weight:bold;
+            background: #C5C7C5;
+            -webkit-background-clip: text;
+            color: transparent;
+            display: inline;
+        }
+        </style>
+        <div class="text">有什麼我可以幫上忙的嗎？</div>
+        """
+    st.markdown(html_code1, unsafe_allow_html=True)
+    st.markdown(html_code2, unsafe_allow_html=True)
+    st.write("\n")
+
 if selected == "對話" and 'exported_shortcuts' in st.session_state:
     api_key_entered = (st.session_state['model_type'] == "ChatGPT" and st.session_state['chatbot_api_key']) or \
               (st.session_state['model_type'] == "Perplexity" and st.session_state['perplexity_api_key'])
@@ -847,7 +875,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 if shortcut['target'] == 'chat':  
                     col = st.columns(1)[0]
                     with col:
-                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#C4DDA7", "color": "#2b2727"}):
+                        if ui.button(shortcut['name'], key=f'exported_shortcut_{idx}', style={"width": "100%", "background": "#B4D7FF", "color": "#2b2727"}):
                             st.session_state['active_shortcut'] = shortcut
 
     if 'exported_shortcuts' in st.session_state and not (st.session_state['model_type'] == "ChatGPT" and st.session_state['open_ai_model'] == "DALL-E"):
@@ -858,40 +886,15 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 with confirm_col:
                     st.button("確認", on_click=reset_chat, args=(True,))
                 with cancel_col:
-                    st.button("取消", on_click=reset_chat, args=(False,))
+                    st.button("取消", on_click=reset_chat)
             else:
                 st.button("重置對話", on_click=reset_chat)
 
-    if selected == "對話":
-        html_code1 = f"""
-            <style>
-                .gradient-text {{
-                    font-size: 55px;
-                    font-weight:bold;
-                    background: linear-gradient(to right, #5282ED, #9874CE, #D96470);
-                    -webkit-background-clip: text;
-                    color: transparent;
-                    display: inline;
-                }}
-            </style>
-            <div class="gradient-text">{greeting_message}</div>
-            """
-        html_code2 = """
-            <style>
-            .text {
-                font-size: 50px;
-                font-weight:bold;
-                background: #C5C7C5;
-                -webkit-background-clip: text;
-                color: transparent;
-                display: inline;
-            }
-            </style>
-            <div class="text">有什麼我可以幫上忙的嗎？</div>
-            """
-        if st.session_state['reset_confirmed']:
-            st.session_state['reset_confirmed'] = False
-            
+    if selected == "對話" and st.session_state['model_type'] == "ChatGPT":
+        if st.session_state['gpt_chat_started'] == False and not st.session_state['prompt_submitted']:
+            st.session_state['text_placeholder'] = st.empty()
+            render_initial_placeholder()
+
         if f"messages_{st.session_state['model_type']}" not in st.session_state:
             st.session_state[f"messages_{st.session_state['model_type']}"] = []
         
@@ -899,15 +902,8 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
             for msg in st.session_state[f"messages_{st.session_state['model_type']}"]:
                 message_func(msg["content"], is_user=(msg["role"] == "user"))
     
-        if st.session_state['model_type'] == "ChatGPT" and not st.session_state['prompt_submitted']:
+        if st.session_state['model_type'] == "ChatGPT" and not st.session_state['prompt_submitted'] and not st.session_state['gpt_chat_started'] == True:
             if not st.session_state['open_ai_model'] == "DALL-E":
-                if st.session_state['gpt_chat_started'] == False:
-                    st.session_state['text_placeholder'] = st.empty()
-                    with st.session_state['text_placeholder'].container():
-                        st.markdown(html_code1, unsafe_allow_html=True)
-                        st.markdown(html_code2, unsafe_allow_html=True)
-                        st.write("\n")
-                        
                 prompt = st.chat_input()
                 if prompt:
                     if not st.session_state['chatbot_api_key']:
@@ -918,27 +914,24 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                             st.session_state['text_placeholder'].empty()
                             st.session_state['text_placeholder'] = None 
 
-                        handle_prompt_submission(prompt)
+                        asyncio.run(handle_prompt_submission(prompt))
     
-        if st.session_state['model_type'] == "Perplexity" and not st.session_state['prompt_submitted']:
-            if st.session_state['perplexity_chat_started'] == False:
-                st.session_state['text_placeholder'] = st.empty()
-                with st.session_state['text_placeholder'].container():
-                    st.markdown(html_code1, unsafe_allow_html=True)
-                    st.markdown(html_code2, unsafe_allow_html=True)
-                    st.write("\n")
+    elif selected == "對話" and st.session_state['model_type'] == "Perplexity":
+        if st.session_state['perplexity_chat_started'] == False and not st.session_state['prompt_submitted'] and not st.session_state['perplexity_chat_started'] == True:
+            st.session_state['text_placeholder'] = st.empty()
+            render_initial_placeholder()
                 
-            prompt = st.chat_input()
-            if prompt:
-                if not st.session_state['perplexity_api_key']:
-                    message_func("請輸入您的 Perplexity API Key", is_user=False)
-                else:
-                    st.session_state['perplexity_chat_started'] = True
-                    if st.session_state['text_placeholder']:
-                        st.session_state['text_placeholder'].empty()
-                        st.session_state['text_placeholder'] = None 
+        prompt = st.chat_input()
+        if prompt:
+            if not st.session_state['perplexity_api_key']:
+                message_func("請輸入您的 Perplexity API Key", is_user=False)
+            else:
+                st.session_state['perplexity_chat_started'] = True
+                if st.session_state['text_placeholder']:
+                    st.session_state['text_placeholder'].empty()
+                    st.session_state['text_placeholder'] = None 
                         
-                    handle_prompt_submission(prompt)
+                asyncio.run(handle_prompt_submission(prompt))
 
     if 'active_shortcut' in st.session_state and st.session_state.get('active_shortcut') is not None and st.session_state['active_shortcut']['target'] == 'chat':
         shortcut = st.session_state['active_shortcut']
@@ -966,12 +959,14 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
     
         if 提示詞模板 and not st.session_state['prompt_submitted']:
             if st.session_state['model_type'] == "ChatGPT":
-                st.session_state['gpt_chat_started'] = True
+                if st.session_state['gpt_chat_started'] == False:
+                    st.session_state['gpt_chat_started'] = True
                 if st.session_state['text_placeholder']:
                     st.session_state['text_placeholder'].empty()
                     st.session_state['text_placeholder'] = None 
             elif st.session_state['model_type'] == "Perplexity":
-                st.session_state['perplexity_chat_started'] = True
+                if st.session_state['perplexity_chat_started'] == False:
+                    st.session_state['perplexity_chat_started'] = True
                 if st.session_state['text_placeholder']:
                     st.session_state['text_placeholder'].empty()
                     st.session_state['text_placeholder'] = None 
@@ -983,7 +978,7 @@ if selected == "對話" and 'exported_shortcuts' in st.session_state:
                 prompt_template = prompt_template.replace(f"{{{{{key}}}}}", f"{inputs[key]}")
             try:
                 prompt = prompt_template.replace("{{", "{").replace("}}", "}")  
-                handle_prompt_submission(prompt)
+                asyncio.run(handle_prompt_submission(prompt))
                 st.session_state['prompt_submitted'] = True
                 st.rerun()
             except KeyError as e:
@@ -1233,6 +1228,38 @@ if selected == "模型設定":
     save_settings(settings)
 
 #%% AI生圖頁面
+def render_ai_image_placeholder():
+    """渲染AI生圖頁面的歡迎文字"""
+    html_code1 = f"""
+        <style>
+            .gradient-text {{
+                font-size: 55px;
+                font-weight:bold;
+                background: linear-gradient(to right, #FF5733, #FF8D1A, #FFC300);
+                -webkit-background-clip: text;
+                color: transparent;
+                display: inline;
+            }}
+        </style>
+        <div class="gradient-text">{greeting_message}</div>
+        """
+    html_code2 = """
+        <style>
+        .text {
+            font-size: 50px;
+            font-weight:bold;
+            background: #FFD700;
+            -webkit-background-clip: text;
+            color: transparent;
+            display: inline;
+        }
+        </style>
+        <div class="text">今天想創造些什麼？</div>
+        """
+    st.markdown(html_code1, unsafe_allow_html=True)
+    st.markdown(html_code2, unsafe_allow_html=True)
+    st.write("\n")
+    
 def update(action):
     if action == 'reset':
         st.session_state['reset_confirmation'] = True
@@ -1245,7 +1272,7 @@ def update(action):
     elif action == 'cancel':
         st.session_state['reset_confirmation'] = False
 
-def generate_image_from_prompt(prompt, model):
+async def generate_image_from_prompt(prompt, model):
     client = OpenAI(api_key=st.session_state['chatbot_api_key'])
 
     try:
@@ -1267,8 +1294,8 @@ def generate_image_from_prompt(prompt, model):
         st.error(f"圖片生成失敗：{str(e)}")
         return None
     
-def handle_image_generation(prompt):
-    img_base64 = generate_image_from_prompt(prompt, st.session_state['dalle_model'])
+async def handle_image_generation(prompt):
+    img_base64 = await generate_image_from_prompt(prompt, st.session_state['dalle_model'])
     if img_base64:
         thinking_placeholder.empty()
         st.session_state["messages_DALLE"] = [msg for msg in st.session_state["messages_DALLE"] if msg["content"] != status_text]
@@ -1281,38 +1308,10 @@ def handle_image_generation(prompt):
 if selected == "AI生圖":
     if 'messages_DALLE' not in st.session_state:
         st.session_state['messages_DALLE'] = chat_history_dalle.get('DALL-E', [])
+        
     if st.session_state['dalle_chat_started'] == False and not st.session_state['prompt_submitted']:
         st.session_state['text_placeholder'] = st.empty()
-        with st.session_state['text_placeholder'].container():
-            html_code1 = f"""
-            <style>
-            .gradient-text {{
-                font-size: 55px;
-                font-weight:bold;
-                background: linear-gradient(to right, #5282ED, #9874CE, #D96470);
-                -webkit-background-clip: text;
-                color: transparent;
-                display: inline;
-            }}
-            </style>
-            <div class="gradient-text">{greeting_message}</div>
-            """
-            st.markdown(html_code1, unsafe_allow_html=True)
-            html_code2 = """
-                <style>
-                    .text {
-                        font-size: 50px;
-                        font-weight:bold;
-                        background: #C5C7C5;
-                        -webkit-background-clip: text;
-                        color: transparent;
-                        display: inline;
-                    }
-                </style>
-                <div class="text">今天想創造些什麼？</div>
-                """
-            st.markdown(html_code2, unsafe_allow_html=True)
-            st.write("\n")
+        render_ai_image_placeholder()
     
     for msg in st.session_state["messages_DALLE"]:
         message_func(msg["content"], is_user=(msg["role"] == "user"))
@@ -1626,28 +1625,26 @@ if selected == "提示詞":
                     if shortcut['components'] and st.session_state[f'prompt_template_{idx}'].strip():
                         if len(st.session_state.get('exported_shortcuts', [])) < 4 and shortcut['name'] not in [s['name'] for s in st.session_state.get('exported_shortcuts', [])]:
                             col1, col2 = st.columns(2)
-                            with col1:
-                                if st.button("輸出到對話頁面", key=f'export_to_chat_{idx}'):
-                                    if 'exported_shortcuts' not in st.session_state:
-                                        st.session_state['exported_shortcuts'] = []
-                                    shortcut['target'] = 'chat'
-                                    st.session_state['exported_shortcuts'].append(shortcut)
-                                    save_shortcuts()
-                                    st.success("成功輸出，請至對話頁查看")
-                                    time.sleep(1)
-                                    st.session_state['exported_shortcuts'].append(shortcut['name'])
-                                    st.rerun()
-                            with col2:
-                                if st.button("輸出到AI生圖頁", key=f'export_to_image_{idx}'):
-                                    if 'exported_shortcuts' not in st.session_state:
-                                        st.session_state['exported_shortcuts'] = []
-                                    shortcut['target'] = 'image'
-                                    st.session_state['exported_shortcuts'].append(shortcut)
-                                    save_shortcuts()
-                                    st.success("成功輸出，請至AI生圖頁查看")
-                                    time.sleep(1)
-                                    st.session_state['exported_shortcuts'].append(shortcut['name'])
-                                    st.rerun()
+                            if col1.button("輸出到對話頁面", key=f'export_to_chat_{idx}'):
+                                if'exported_shortcuts' not in st.session_state:
+                                    st.session_state['exported_shortcuts'] = []
+                                shortcut['target'] = 'chat'
+                                st.session_state['exported_shortcuts'].append(shortcut)
+                                save_shortcuts()
+                                st.success("輸出成功")
+                                time.sleep(1)
+                                st.session_state['exported_shortcuts'].append(shortcut['name'])
+                                st.rerun()
+                            if col2.button("輸出到AI生圖頁", key=f'export_to_image_{idx}'):
+                                if 'exported_shortcuts' not in st.session_state:
+                                    st.session_state['exported_shortcuts'] = []
+                                shortcut['target'] = 'image'
+                                st.session_state['exported_shortcuts'].append(shortcut)
+                                save_shortcuts()
+                                st.success("輸出成功")
+                                time.sleep(1)
+                                st.session_state['exported_shortcuts'].append(shortcut['name'])
+                                st.rerun()
 
                 if len(st.session_state['shortcuts']) > 0:
                     tab_name = shortcut['name']
